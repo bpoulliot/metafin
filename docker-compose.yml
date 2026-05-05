@@ -7,20 +7,18 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - "${USERDIR}/docker/metafin:/config"
+      - "/path/to/metafin/config:/config"
       # Media mounts must match Jellyfin's container-side paths exactly so that
       # file paths returned by the Jellyfin API are accessible to Metafin.
-      - "${MCORE}:/media/core:rw"
-      - "${MFLUX}:/media/flux:rw"
-      - "${MFOURK}:/media/4K:rw"
-      - "${LUXE}:/media/luxe:rw"
-      - "${XTOR}:/media/xtor:rw"
-      - "/mnt/media/scopuli:/media/scopuli:rw"
+      # Add one entry per media root, mirroring your Jellyfin volume mounts.
+      # Example: if Jellyfin mounts your movies as /media/movies, Metafin must
+      # also mount that same host path at /media/movies.
+      - "/path/to/media/movies:/media/movies:rw"
+      - "/path/to/media/tv:/media/tv:rw"
     ports:
       - "127.0.0.1:7755:7755"
     networks:
       - frontend
-      - vpn
     security_opt:
       - no-new-privileges:true
     healthcheck:
