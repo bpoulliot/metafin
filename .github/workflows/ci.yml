@@ -33,7 +33,7 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
-          failure-threshold: warning
+          failure-threshold: error
 
       - name: Security scan — Python code (bandit)
         run: bandit -r app/ -ll --exclude app/static
@@ -72,6 +72,7 @@ jobs:
         with:
           context: .
           push: false
+          load: true
           tags: metafin:ci
           build-args: BUILD_VERSION=ci
           cache-from: type=gha
