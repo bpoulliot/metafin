@@ -255,8 +255,8 @@
     <div class="card full">
       <h2>Media browser</h2>
       <div class="filter-row">
-        <input class="filter" id="filter-res" placeholder="Resolution (e.g. 1080p)" oninput="loadMedia()">
-        <input class="filter" id="filter-lang" placeholder="Language (e.g. JA)" oninput="loadMedia()">
+        <input class="filter" id="filter-res" placeholder="Resolution (e.g. 1080p)" oninput="mediaPage=1;loadMedia()">
+        <input class="filter" id="filter-lang" placeholder="Language (e.g. JA)" oninput="mediaPage=1;loadMedia()">
       </div>
       <div style="overflow-x:auto">
         <table>
@@ -264,7 +264,11 @@
           <tbody id="media-tbody"><tr><td colspan="7" style="color:var(--muted);text-align:center;padding:24px">Loading…</td></tr></tbody>
         </table>
       </div>
-      <div id="media-page-info" style="margin-top:8px;font-size:11px;color:var(--muted)"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+        <button class="btn sm" id="btn-prev-page" onclick="prevPage()" disabled>← Prev</button>
+        <span id="media-page-info" style="font-size:11px;color:var(--muted)"></span>
+        <button class="btn sm" id="btn-next-page" onclick="nextPage()" disabled>Next →</button>
+      </div>
     </div>
   </div>
 </div>
@@ -315,31 +319,31 @@
           <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px">Color</span>
           <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px">Show</span>
 
-          <span style="font-size:12px;color:#2ab5a3;font-weight:600">Video</span>
+          <span style="font-size:12px;color:#2db8a8;font-weight:600">Video</span>
           <div class="color-row">
-            <input type="color" id="prev-video-color" value="#1a7a6e" oninput="syncCatHex('video'); onColorChange()">
-            <input type="text" id="prev-video-hex" value="#1a7a6e" class="hex-input" maxlength="7" oninput="syncCatPicker('video'); onColorChange()">
+            <input type="color" id="prev-video-color" value="#134e4a" oninput="syncCatHex('video'); onColorChange()">
+            <input type="text" id="prev-video-hex" value="#134e4a" class="hex-input" maxlength="7" oninput="syncCatPicker('video'); onColorChange()">
           </div>
           <label class="toggle"><input type="checkbox" id="prev-show-video" checked onchange="onPreviewChange()"><span class="slider"></span></label>
 
-          <span style="font-size:12px;color:#a87de0;font-weight:600">Audio</span>
+          <span style="font-size:12px;color:#6080d8;font-weight:600">Audio</span>
           <div class="color-row">
-            <input type="color" id="prev-audio-color" value="#6b3a9e" oninput="syncCatHex('audio'); onColorChange()">
-            <input type="text" id="prev-audio-hex" value="#6b3a9e" class="hex-input" maxlength="7" oninput="syncCatPicker('audio'); onColorChange()">
+            <input type="color" id="prev-audio-color" value="#1e3a8a" oninput="syncCatHex('audio'); onColorChange()">
+            <input type="text" id="prev-audio-hex" value="#1e3a8a" class="hex-input" maxlength="7" oninput="syncCatPicker('audio'); onColorChange()">
           </div>
           <label class="toggle"><input type="checkbox" id="prev-show-audio" checked onchange="onPreviewChange()"><span class="slider"></span></label>
 
-          <span style="font-size:12px;color:#e09030;font-weight:600">Subtitles</span>
+          <span style="font-size:12px;color:#d06040;font-weight:600">Subtitles</span>
           <div class="color-row">
-            <input type="color" id="prev-sub-color" value="#a86200" oninput="syncCatHex('sub'); onColorChange()">
-            <input type="text" id="prev-sub-hex" value="#a86200" class="hex-input" maxlength="7" oninput="syncCatPicker('sub'); onColorChange()">
+            <input type="color" id="prev-sub-color" value="#7c2d12" oninput="syncCatHex('sub'); onColorChange()">
+            <input type="text" id="prev-sub-hex" value="#7c2d12" class="hex-input" maxlength="7" oninput="syncCatPicker('sub'); onColorChange()">
           </div>
           <label class="toggle"><input type="checkbox" id="prev-show-subs" checked onchange="onPreviewChange()"><span class="slider"></span></label>
 
-          <span style="font-size:12px;color:#999;font-weight:600">Rating</span>
+          <span style="font-size:12px;color:#9060c8;font-weight:600">Rating</span>
           <div class="color-row">
-            <input type="color" id="prev-rating-color" value="#2d2d2d" oninput="syncCatHex('rating'); onColorChange()">
-            <input type="text" id="prev-rating-hex" value="#2d2d2d" class="hex-input" maxlength="7" oninput="syncCatPicker('rating'); onColorChange()">
+            <input type="color" id="prev-rating-color" value="#4c1d95" oninput="syncCatHex('rating'); onColorChange()">
+            <input type="text" id="prev-rating-hex" value="#4c1d95" class="hex-input" maxlength="7" oninput="syncCatPicker('rating'); onColorChange()">
           </div>
           <label class="toggle"><input type="checkbox" id="prev-show-rating" checked onchange="onPreviewChange()"><span class="slider"></span></label>
         </div>
@@ -375,6 +379,11 @@
         <input type="text" id="prev-multi" value="re-encode" oninput="onPreviewChange()">
       </div>
 
+    </div>
+
+    <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
+      <label class="toggle"><input type="checkbox" id="prev-normalize-portrait" checked onchange="onPreviewChange()"><span class="slider"></span></label>
+      <span style="font-size:13px">Pad square/landscape posters to 2:3 portrait</span>
     </div>
 
     <div class="btn-row">
@@ -566,51 +575,6 @@
     </div>
   </div>
 
-  <!-- Badge Appearance -->
-  <div class="settings-section">
-    <div class="section-header" onclick="toggleSection(this)">
-      🎨 Badge appearance <span class="chevron">▾</span>
-    </div>
-    <div class="section-body">
-      <div class="field" style="max-width:280px">
-        <label>Text color (all categories)</label>
-        <div class="color-row">
-          <input type="color" id="s-badge-text-color" value="#ffffff" oninput="syncSettingsHex('badge-text')">
-          <input type="text" id="s-badge-text-hex" value="#ffffff" class="hex-input" maxlength="7" oninput="syncSettingsPicker('badge-text')">
-        </div>
-      </div>
-      <table class="dest-grid" style="margin-top:10px">
-        <thead><tr><th>Category</th><th>Fill color</th><th>Show on poster</th></tr></thead>
-        <tbody>
-          <tr>
-            <td style="color:#2ab5a3;font-weight:600">Video</td>
-            <td><div class="color-row"><input type="color" id="s-video-color" value="#1a7a6e" oninput="syncSettingsHex('video')"><input type="text" id="s-video-hex" value="#1a7a6e" class="hex-input" maxlength="7" oninput="syncSettingsPicker('video')"></div></td>
-            <td><label class="toggle"><input type="checkbox" id="s-show-video" checked><span class="slider"></span></label></td>
-          </tr>
-          <tr>
-            <td style="color:#a87de0;font-weight:600">Audio</td>
-            <td><div class="color-row"><input type="color" id="s-audio-color" value="#6b3a9e" oninput="syncSettingsHex('audio')"><input type="text" id="s-audio-hex" value="#6b3a9e" class="hex-input" maxlength="7" oninput="syncSettingsPicker('audio')"></div></td>
-            <td><label class="toggle"><input type="checkbox" id="s-show-audio" checked><span class="slider"></span></label></td>
-          </tr>
-          <tr>
-            <td style="color:#e09030;font-weight:600">Subtitles</td>
-            <td><div class="color-row"><input type="color" id="s-sub-color" value="#a86200" oninput="syncSettingsHex('sub')"><input type="text" id="s-sub-hex" value="#a86200" class="hex-input" maxlength="7" oninput="syncSettingsPicker('sub')"></div></td>
-            <td><label class="toggle"><input type="checkbox" id="s-show-subs" checked><span class="slider"></span></label></td>
-          </tr>
-          <tr>
-            <td style="color:#999;font-weight:600">Rating</td>
-            <td><div class="color-row"><input type="color" id="s-rating-color" value="#2d2d2d" oninput="syncSettingsHex('rating')"><input type="text" id="s-rating-hex" value="#2d2d2d" class="hex-input" maxlength="7" oninput="syncSettingsPicker('rating')"></div></td>
-            <td><label class="toggle"><input type="checkbox" id="s-show-rating" checked><span class="slider"></span></label></td>
-          </tr>
-        </tbody>
-      </table>
-      <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
-        <label class="toggle"><input type="checkbox" id="s-normalize-portrait" checked><span class="slider"></span></label>
-        <span style="font-size:13px">Pad square/landscape posters to 2:3 portrait so badges aren't cropped by Jellyfin</span>
-      </div>
-    </div>
-  </div>
-
   <!-- Tag Destinations -->
   <div class="settings-section">
     <div class="section-header" onclick="toggleSection(this)">
@@ -758,18 +722,6 @@ function syncCatPicker(cat) {
     if (picker) { picker.value = val; updateContrastIndicator(); }
   }
 }
-function syncSettingsHex(cat) {
-  const picker = document.getElementById(`s-${cat}-color`);
-  const hex = document.getElementById(`s-${cat}-hex`);
-  if (picker && hex) hex.value = picker.value;
-}
-function syncSettingsPicker(cat) {
-  const val = (document.getElementById(`s-${cat}-hex`)?.value || '').trim();
-  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
-    const picker = document.getElementById(`s-${cat}-color`);
-    if (picker) picker.value = val;
-  }
-}
 function onSettingsChange() {}
 
 function onColorChange() {
@@ -854,6 +806,9 @@ async function loadMedia() {
     const tbody = document.getElementById('media-tbody');
     if (!d.items.length) {
       tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:24px">No items yet — run a scan to populate.</td></tr>';
+      document.getElementById('media-page-info').textContent = '';
+      document.getElementById('btn-prev-page').disabled = true;
+      document.getElementById('btn-next-page').disabled = true;
       return;
     }
     tbody.innerHTML = d.items.map(item => {
@@ -865,7 +820,11 @@ async function loadMedia() {
         : '<span style="color:var(--muted)">—</span>';
       const audioTracks = item.audio_tracks || [];
       const audioCell = audioTracks.length
-        ? audioTracks.map(t => `<span class="badge">${t.lang && t.lang !== 'UND' ? t.lang + ' ' : ''}${t.codec}</span>`).join('')
+        ? audioTracks.map(t => {
+            const langLabel = t.lang ? t.lang + ' ' : '';
+            const undStyle = t.lang === 'UND' || !t.lang ? ' style="color:var(--yellow)"' : '';
+            return `<span class="badge"${undStyle}>${langLabel}${t.codec}</span>`;
+          }).join('')
         : (item.languages||[]).map(l => `<span class="badge">${l}</span>`).join('') || '<span style="color:var(--muted)">—</span>';
       const ratingCell = item.content_rating
         ? `<span class="badge" style="background:#3a3a3a;color:#ccc">${item.content_rating}</span>`
@@ -884,10 +843,15 @@ async function loadMedia() {
         <td style="color:var(--muted);font-size:11px">${item.last_scanned ? fmt(item.last_scanned) : '—'}</td>
       </tr>`;
     }).join('');
-    document.getElementById('media-page-info').textContent =
-      `Showing ${(mediaPage-1)*50+1}–${Math.min(mediaPage*50,d.total)} of ${d.total}`;
+    const start = (mediaPage-1)*50+1, end = Math.min(mediaPage*50, d.total);
+    document.getElementById('media-page-info').textContent = `${start}–${end} of ${d.total}`;
+    document.getElementById('btn-prev-page').disabled = mediaPage <= 1;
+    document.getElementById('btn-next-page').disabled = end >= d.total;
   } catch {}
 }
+
+function prevPage() { if (mediaPage > 1) { mediaPage--; loadMedia(); } }
+function nextPage() { mediaPage++; loadMedia(); }
 
 async function triggerScan(type) {
   document.getElementById('btn-inc').disabled = true;
@@ -1069,14 +1033,15 @@ function collectPreviewSettings() {
       badge_opacity: parseInt(document.getElementById('prev-opacity').value) / 100,
       badge_size: document.querySelector('#prev-badge-size .size-btn.active')?.dataset.size ?? 'medium',
       badge_text_color:  document.getElementById('prev-text-color')?.value  || '#ffffff',
-      video_badge_color: document.getElementById('prev-video-color')?.value  || '#1a7a6e',
-      audio_badge_color: document.getElementById('prev-audio-color')?.value  || '#6b3a9e',
-      sub_badge_color:   document.getElementById('prev-sub-color')?.value    || '#a86200',
-      rating_badge_color:document.getElementById('prev-rating-color')?.value || '#2d2d2d',
+      video_badge_color: document.getElementById('prev-video-color')?.value  || '#134e4a',
+      audio_badge_color: document.getElementById('prev-audio-color')?.value  || '#1e3a8a',
+      sub_badge_color:   document.getElementById('prev-sub-color')?.value    || '#7c2d12',
+      rating_badge_color:document.getElementById('prev-rating-color')?.value || '#4c1d95',
       show_video_badges: document.getElementById('prev-show-video')?.checked  ?? true,
       show_audio_badges: document.getElementById('prev-show-audio')?.checked  ?? true,
       show_sub_badges:   document.getElementById('prev-show-subs')?.checked   ?? true,
       show_rating_badge: document.getElementById('prev-show-rating')?.checked ?? true,
+      normalize_portrait: document.getElementById('prev-normalize-portrait')?.checked ?? true,
     },
   };
 }
@@ -1157,23 +1122,8 @@ function populateForm(s) {
   setVal('prev-dual',   s.tags?.dual_audio_tag  ?? 'dual-audio');
   setVal('prev-multi',  s.tags?.multi_audio_tag ?? 'multi-audio');
 
-  // Settings page — badge appearance
-  const sColor = (id, val) => {
-    const picker = document.getElementById('s-' + id + '-color');
-    const hex    = document.getElementById('s-' + id + '-hex');
-    if (picker) picker.value = val;
-    if (hex)    hex.value    = val;
-  };
-  sColor('badge-text', s.image?.badge_text_color   ?? '#ffffff');
-  sColor('video',      s.image?.video_badge_color  ?? '#1a7a6e');
-  sColor('audio',      s.image?.audio_badge_color  ?? '#6b3a9e');
-  sColor('sub',        s.image?.sub_badge_color    ?? '#a86200');
-  sColor('rating',     s.image?.rating_badge_color ?? '#2d2d2d');
-  setChk('s-show-video',  s.image?.show_video_badges  ?? true);
-  setChk('s-show-audio',  s.image?.show_audio_badges  ?? true);
-  setChk('s-show-subs',   s.image?.show_sub_badges    ?? true);
-  setChk('s-show-rating', s.image?.show_rating_badge  ?? true);
-  setChk('s-normalize-portrait', s.image?.normalize_portrait ?? true);
+  // Preview page — normalize portrait
+  setChk('prev-normalize-portrait', s.image?.normalize_portrait ?? true);
 
   // Settings page — tag destinations
   const CATS = ['video','audio','subtitles','rating'];
@@ -1220,16 +1170,19 @@ function collectForm() {
     },
     image: {
       ...(settings.image || {}),
-      badge_text_color:   gS('s-badge-text-color') || '#ffffff',
-      video_badge_color:  gS('s-video-color')  || '#1a7a6e',
-      audio_badge_color:  gS('s-audio-color')  || '#6b3a9e',
-      sub_badge_color:    gS('s-sub-color')    || '#a86200',
-      rating_badge_color: gS('s-rating-color') || '#2d2d2d',
-      show_video_badges:   document.getElementById('s-show-video')?.checked           ?? true,
-      show_audio_badges:   document.getElementById('s-show-audio')?.checked           ?? true,
-      show_sub_badges:     document.getElementById('s-show-subs')?.checked            ?? true,
-      show_rating_badge:   document.getElementById('s-show-rating')?.checked          ?? true,
-      normalize_portrait:  document.getElementById('s-normalize-portrait')?.checked   ?? true,
+      badge_position:     document.getElementById('prev-position')?.value ?? 'bottom-left',
+      badge_opacity:      (parseInt(document.getElementById('prev-opacity')?.value) || 65) / 100,
+      badge_size:         document.querySelector('#prev-badge-size .size-btn.active')?.dataset.size ?? 'medium',
+      badge_text_color:   document.getElementById('prev-text-color')?.value  || '#ffffff',
+      video_badge_color:  document.getElementById('prev-video-color')?.value  || '#134e4a',
+      audio_badge_color:  document.getElementById('prev-audio-color')?.value  || '#1e3a8a',
+      sub_badge_color:    document.getElementById('prev-sub-color')?.value    || '#7c2d12',
+      rating_badge_color: document.getElementById('prev-rating-color')?.value || '#4c1d95',
+      show_video_badges:  document.getElementById('prev-show-video')?.checked  ?? true,
+      show_audio_badges:  document.getElementById('prev-show-audio')?.checked  ?? true,
+      show_sub_badges:    document.getElementById('prev-show-subs')?.checked   ?? true,
+      show_rating_badge:  document.getElementById('prev-show-rating')?.checked ?? true,
+      normalize_portrait: document.getElementById('prev-normalize-portrait')?.checked ?? true,
     },
     auth: { username: getVal('s-auth-username') },
     log_level: settings.log_level ?? 'INFO',
@@ -1303,20 +1256,35 @@ function updateInstance(type, idx, key, value) {
 }
 
 async function testInstance(type, idx) {
+  const arr = type === 'sonarr' ? sonarrInstances : radarrInstances;
+  const inst = arr[idx];
   const statusEl = document.getElementById(`inst-status-${type}-${idx}`);
-  statusEl.textContent = '(Save first, then health endpoint will reflect current API keys)';
-  statusEl.style.color = 'var(--muted)';
+  if (!inst?.url) { statusEl.textContent = 'Enter a URL first'; statusEl.style.color = 'var(--muted)'; return; }
+  statusEl.textContent = 'Testing…'; statusEl.style.color = 'var(--muted)';
+  try {
+    const h = await apiFetch('/api/arr/test', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({arr_type: type, url: inst.url, api_key: inst.api_key||''})});
+    statusEl.textContent = h.ok ? '✓ ' + h.message : '✗ ' + h.message;
+    statusEl.style.color = h.ok ? 'var(--green)' : 'var(--red)';
+  } catch(e) {
+    statusEl.textContent = '✗ ' + e; statusEl.style.color = 'var(--red)';
+  }
 }
 
 // ── Libraries ──
 async function fetchLibraries() {
   const statusEl = document.getElementById('jf-status');
-  statusEl.textContent = 'Fetching…';
+  statusEl.textContent = 'Testing…';
   statusEl.style.color = 'var(--muted)';
   try {
-    const body = collectForm();
-    await apiFetch('/api/settings', {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
-    const libs = await apiFetch('/api/jellyfin/libraries');
+    const url = getVal('s-jf-url');
+    const api_key = getVal('s-jf-apikey');
+    const result = await apiFetch('/api/jellyfin/test', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url, api_key})});
+    if (!result.ok) {
+      statusEl.textContent = '✗ ' + result.message;
+      statusEl.style.color = 'var(--red)';
+      return;
+    }
+    const libs = result.libraries;
     const listEl = document.getElementById('lib-list');
     if (!libs.length) {
       listEl.innerHTML = '<span style="color:var(--muted);font-size:12px">No libraries found.</span>';
@@ -1330,7 +1298,7 @@ async function fetchLibraries() {
         <span>${l.name}</span>
         <span style="font-size:11px;color:var(--muted)">(${l.type || 'mixed'})</span>
       </label>`).join('');
-    statusEl.textContent = `✓ ${libs.length} libraries`;
+    statusEl.textContent = `✓ Connected — ${libs.length} libraries`;
     statusEl.style.color = 'var(--green)';
   } catch(e) {
     statusEl.textContent = '✗ ' + e;
@@ -1368,25 +1336,22 @@ async function fetchRootFolders() {
   const el = document.getElementById('rootfolder-list');
   el.innerHTML = 'Fetching…';
   const paths = new Set();
-  const body = collectForm();
-  try {
-    await apiFetch('/api/settings', {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
-    for (const inst of sonarrInstances) {
-      if (!inst.name) continue;
-      try {
-        const folders = await apiFetch(`/api/sonarr/${encodeURIComponent(inst.name)}/rootfolders`);
-        folders.forEach(f => paths.add(f.path));
-      } catch {}
-    }
-    for (const inst of radarrInstances) {
-      if (!inst.name) continue;
-      try {
-        const folders = await apiFetch(`/api/radarr/${encodeURIComponent(inst.name)}/rootfolders`);
-        folders.forEach(f => paths.add(f.path));
-      } catch {}
-    }
-  } catch {}
-  if (!paths.size) { el.innerHTML = '<span style="color:var(--muted);font-size:12px">No root folders found. Save settings and try again.</span>'; return; }
+  const opts = {method:'POST', headers:{'Content-Type':'application/json'}};
+  for (const inst of sonarrInstances) {
+    if (!inst.url) continue;
+    try {
+      const folders = await apiFetch('/api/arr/rootfolders', {...opts, body: JSON.stringify({arr_type:'sonarr', url:inst.url, api_key:inst.api_key||''})});
+      folders.forEach(f => paths.add(f.path));
+    } catch {}
+  }
+  for (const inst of radarrInstances) {
+    if (!inst.url) continue;
+    try {
+      const folders = await apiFetch('/api/arr/rootfolders', {...opts, body: JSON.stringify({arr_type:'radarr', url:inst.url, api_key:inst.api_key||''})});
+      folders.forEach(f => paths.add(f.path));
+    } catch {}
+  }
+  if (!paths.size) { el.innerHTML = '<span style="color:var(--muted);font-size:12px">No root folders found — enter URLs above first.</span>'; return; }
   el.innerHTML = [...paths].map(p =>
     `<button class="btn sm" onclick="addRootPath('${p.replace(/'/g,"\\'")}')" title="Click to add as path filter">${p}</button>`
   ).join('');

@@ -72,11 +72,11 @@ class ImageConfig(BaseModel):
     badge_size: Literal["small", "medium", "large"] = "medium"
     badge_text_color: str = "#ffffff"
 
-    # Per-category badge colors
-    video_badge_color: str = "#1a7a6e"  # teal
-    audio_badge_color: str = "#6b3a9e"  # purple
-    sub_badge_color: str = "#a86200"  # amber (4.76:1 vs white, WCAG AA)
-    rating_badge_color: str = "#2d2d2d"  # dark gray
+    # Per-category badge colors (all verified WCAG AAA ≥7:1 against white text)
+    video_badge_color: str = "#134e4a"  # dark teal  9.3:1
+    audio_badge_color: str = "#1e3a8a"  # deep navy 10.4:1
+    sub_badge_color: str = "#7c2d12"    # deep rust  9.5:1
+    rating_badge_color: str = "#4c1d95" # deep violet 10.9:1
 
     # Show/hide categories on poster
     show_video_badges: bool = True
