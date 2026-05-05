@@ -266,12 +266,12 @@ def render_badge_groups(
         group_h = _measure_group_height(p["font_size"], p["pad_v"])
         cumulative_offset += group_h + p["row_gap"]
 
-    # Top-right rating (independent)
+    # Top-left rating (independent)
     if rating_group and rating_group.labels:
         result = _render_group(
             result,
             rating_group.labels,
-            "top-right",
+            "top-left",
             rating_group.fill_color,
             rating_group.text_color,
             p["alpha"],
