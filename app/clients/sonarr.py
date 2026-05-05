@@ -12,28 +12,31 @@ class SonarrClient:
     def __init__(self, url: str, api_key: str, name: str = "") -> None:
         self.base = url.rstrip("/")
         self.name = name or url
-        self._headers = {"X-Api-Key": api_key}
+        self._client = httpx.Client(headers={"X-Api-Key": api_key}, timeout=30)
         self._tag_cache: dict[str, int] | None = None  # label → id
 
+    def close(self) -> None:
+        self._client.close()
+
     def _get(self, path: str, **params) -> Any:
-        r = httpx.get(f"{self.base}/api/v3{path}", headers=self._headers, params=params, timeout=30)
+        r = self._client.get(f"{self.base}/api/v3{path}", params=params)
         r.raise_for_status()
         return r.json()
 
     def _post(self, path: str, json: dict) -> Any:
-        r = httpx.post(f"{self.base}/api/v3{path}", headers=self._headers, json=json, timeout=30)
+        r = self._client.post(f"{self.base}/api/v3{path}", json=json)
         r.raise_for_status()
         return r.json()
 
     def _put(self, path: str, json: dict) -> Any:
-        r = httpx.put(f"{self.base}/api/v3{path}", headers=self._headers, json=json, timeout=30)
+        r = self._client.put(f"{self.base}/api/v3{path}", json=json)
         r.raise_for_status()
         return r.json()
 
     def health(self) -> dict:
         """Return {"ok": bool, "status": str, "message": str}."""
         try:
-            r = httpx.get(f"{self.base}/ping", headers=self._headers, timeout=5)
+            r = self._client.get(f"{self.base}/ping", timeout=5)
             if r.status_code == 200:
                 return {"ok": True, "status": "healthy", "message": "Healthy"}
             if r.status_code in (401, 403):

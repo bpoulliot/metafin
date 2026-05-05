@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -8,7 +9,7 @@ import threading
 from pathlib import Path
 
 import httpx
-from fastapi import APIRouter, Form, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -28,7 +29,7 @@ from ..config import (
     save_config_from_dict,
 )
 from ..overlay import BadgeGroup, clear_pill_cache, generate_preview_bytes
-from ..pipeline import progress, run_full_scan, run_incremental_scan
+from ..pipeline import handle_webhook, progress, run_full_scan, run_incremental_scan
 from ..preview_samples import ensure_sample_posters
 from ..scheduler import next_run_time, reschedule
 from ..state import (
@@ -319,6 +320,51 @@ async def scan_runs_list(request: Request):
         return get_recent_scans(session)
     finally:
         session.close()
+
+
+# ---------------------------------------------------------------------------
+# Webhooks
+# ---------------------------------------------------------------------------
+
+_WEBHOOK_SOURCES = {"sonarr", "radarr", "jellyfin"}
+_SONARR_RADARR_EVENTS = {"Download", "Rename"}
+_JELLYFIN_EVENTS = {"ItemAdded"}
+
+
+@router.post("/webhook/{source}")
+async def webhook(source: str, request: Request, background_tasks: BackgroundTasks):
+    if source not in _WEBHOOK_SOURCES:
+        raise HTTPException(status_code=400, detail=f"Unknown webhook source: {source}")
+
+    cfg = get_config()
+    body = await request.body()
+
+    if cfg.webhooks.secret:
+        token = request.query_params.get("token") or request.headers.get("X-Webhook-Token", "")
+        if not hmac.compare_digest(token, cfg.webhooks.secret):
+            raise HTTPException(status_code=403, detail="Invalid webhook token")
+
+    try:
+        payload = json.loads(body)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload") from exc
+
+    event_type = payload.get("eventType") or payload.get("NotificationType", "")
+
+    if event_type == "Test":
+        return {"status": "ok"}
+
+    if source in ("sonarr", "radarr") and event_type not in _SONARR_RADARR_EVENTS:
+        return {"status": "ignored", "eventType": event_type}
+    if source == "jellyfin" and event_type not in _JELLYFIN_EVENTS:
+        return {"status": "ignored", "eventType": event_type}
+
+    if progress.running:
+        logger.info("Webhook %s/%s skipped — scan already running", source, event_type)
+        return {"status": "skipped", "reason": "scan running"}
+
+    background_tasks.add_task(handle_webhook, cfg, source, payload)
+    return {"status": "queued", "source": source, "eventType": event_type}
 
 
 # ---------------------------------------------------------------------------

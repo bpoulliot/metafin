@@ -13,27 +13,33 @@ ITEM_FIELDS = "MediaStreams,Tags,Path,Overview,ParentId,OfficialRating,ProviderI
 class JellyfinClient:
     def __init__(self, url: str, api_key: str) -> None:
         self.base = url.rstrip("/")
-        self._headers = {"Authorization": f'MediaBrowser Token="{api_key}"'}
+        self._client = httpx.Client(
+            headers={"Authorization": f'MediaBrowser Token="{api_key}"'},
+            timeout=30,
+        )
+
+    def close(self) -> None:
+        self._client.close()
 
     def _get(self, path: str, **params) -> Any:
-        r = httpx.get(f"{self.base}{path}", headers=self._headers, params=params, timeout=30)
+        r = self._client.get(f"{self.base}{path}", params=params)
         r.raise_for_status()
         return r.json()
 
     def _post(self, path: str, json: dict | None = None, **params) -> httpx.Response:
-        r = httpx.post(f"{self.base}{path}", headers=self._headers, json=json, params=params, timeout=30)
+        r = self._client.post(f"{self.base}{path}", json=json, params=params)
         r.raise_for_status()
         return r
 
     def _delete(self, path: str, **params) -> httpx.Response:
-        r = httpx.delete(f"{self.base}{path}", headers=self._headers, params=params, timeout=30)
+        r = self._client.delete(f"{self.base}{path}", params=params)
         r.raise_for_status()
         return r
 
     def health(self) -> dict:
         """Return {"ok": bool, "status": "healthy"|"auth_error"|"unreachable"|"timeout", "message": str}."""
         try:
-            r = httpx.get(f"{self.base}/health", headers=self._headers, timeout=5)
+            r = self._client.get(f"{self.base}/health", timeout=5)
             if r.status_code == 200:
                 return {"ok": True, "status": "healthy", "message": "Healthy"}
             if r.status_code in (401, 403):
@@ -156,13 +162,24 @@ class JellyfinClient:
         except Exception as exc:
             log.warning("Jellyfin refresh failed for %s: %s", item_id, exc)
 
+    def find_item_by_provider_id(self, provider: str, value: str) -> dict | None:
+        """Find a Movie or Series by provider ID (e.g. provider='Tvdb', value='81189')."""
+        data = self._get(
+            "/Items",
+            Recursive="true",
+            IncludeItemTypes="Movie,Series",
+            Fields=ITEM_FIELDS,
+            AnyProviderIdEquals=f"{provider}.{value}",
+        )
+        items = data.get("Items", [])
+        return items[0] if items else None
+
     def upload_image(self, item_id: str, image_bytes: bytes, content_type: str = "image/jpeg") -> None:
         """Upload image bytes directly to Jellyfin as the Primary image (API fallback)."""
-        headers = {**self._headers, "Content-Type": content_type}
-        r = httpx.post(
+        r = self._client.post(
             f"{self.base}/Items/{item_id}/Images/Primary",
-            headers=headers,
             content=image_bytes,
+            headers={"Content-Type": content_type},
             timeout=30,
         )
         r.raise_for_status()

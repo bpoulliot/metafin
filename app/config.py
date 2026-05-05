@@ -101,6 +101,10 @@ class AuthConfig(BaseModel):
     secret_key: str = ""
 
 
+class WebhooksConfig(BaseModel):
+    secret: str = ""  # if set, require matching X-Webhook-Token header or ?token= query param
+
+
 class AppConfig(BaseModel):
     jellyfin: JellyfinConfig = Field(default_factory=JellyfinConfig)
     sonarr: SonarrConfig = Field(default_factory=SonarrConfig)
@@ -109,6 +113,7 @@ class AppConfig(BaseModel):
     tags: TagsConfig = Field(default_factory=TagsConfig)
     image: ImageConfig = Field(default_factory=ImageConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
+    webhooks: WebhooksConfig = Field(default_factory=WebhooksConfig)
     log_level: str = "INFO"
 
 
