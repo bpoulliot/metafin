@@ -37,6 +37,13 @@ jobs:
           echo "$NEW" > VERSION
           echo "version=$NEW" >> "$GITHUB_OUTPUT"
 
+      - name: Abort if tag already exists
+        run: |
+          if git ls-remote --tags origin "refs/tags/v${{ steps.bump.outputs.version }}" | grep -q .; then
+            echo "Tag v${{ steps.bump.outputs.version }} already exists — aborting."
+            exit 1
+          fi
+
       - name: Commit, tag, and push
         run: |
           git config user.name "github-actions[bot]"
