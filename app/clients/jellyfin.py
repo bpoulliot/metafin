@@ -111,7 +111,7 @@ class JellyfinClient:
 
     def get_item_by_id(self, item_id: str) -> dict:
         """Fetch full item metadata via list endpoint (direct /Items/{id} requires extra auth in 10.9+)."""
-        data = self._get("/Items", Ids=item_id, Fields="Tags,Genres,Studios,ProviderIds,Overview")
+        data = self._get("/Items", Ids=item_id, Fields="Tags,Genres,Studios,ProviderIds,Overview,OfficialRating")
         items = data.get("Items", [])
         return items[0] if items else {}
 
@@ -127,6 +127,7 @@ class JellyfinClient:
             "OriginalTitle": item.get("OriginalTitle", "") or "",
             "ForcedSortName": item.get("ForcedSortName", "") or "",
             "ProductionYear": item.get("ProductionYear"),
+            "OfficialRating": item.get("OfficialRating") or "",
             "Tags": merged,
             "Genres": item.get("Genres") or [],
             "Studios": [{"Name": s} if isinstance(s, str) else s for s in (item.get("Studios") or [])],

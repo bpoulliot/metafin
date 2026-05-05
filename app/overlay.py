@@ -244,7 +244,7 @@ def render_badge_groups(
 
     result = base.convert("RGBA") if base.mode != "RGBA" else base
 
-    # Bottom-left groups: render bottom-to-top
+    # Main badge groups rendered at cfg.badge_position, bottom-to-top
     cumulative_offset = 0
     for group in reversed(groups):
         if not group.labels:
@@ -252,7 +252,7 @@ def render_badge_groups(
         result = _render_group(
             result,
             group.labels,
-            "bottom-left",
+            cfg.badge_position,
             group.fill_color,
             group.text_color,
             p["alpha"],
