@@ -163,7 +163,7 @@ def probe_file(path: str | Path) -> MediaInfo | None:
         str(path),
     ]
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
     except FileNotFoundError:
         log.error("ffprobe not found — is ffmpeg installed?")
         return None
