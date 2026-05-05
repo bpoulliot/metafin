@@ -29,6 +29,8 @@ def _audio_tags(
     for t in audio_tracks:
         if t.lang and t.lang != "UND":
             tags.append(f"{prefix}{t.lang}")
+        elif not t.lang or t.lang == "UND":
+            tags.append(f"{prefix}UND")
         tags.append(f"{prefix}{t.codec}")
     langs = [t.lang for t in audio_tracks if t.lang and t.lang != "UND"]
     if len(langs) == 2:

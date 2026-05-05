@@ -393,6 +393,66 @@ async def jellyfin_libraries(request: Request):
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
+class _ConnTestReq(BaseModel):
+    url: str
+    api_key: str
+
+
+class _ArrTestReq(BaseModel):
+    arr_type: str
+    url: str
+    api_key: str
+
+
+@router.post("/api/jellyfin/test")
+async def jellyfin_test(request: Request, body: _ConnTestReq):
+    """Test Jellyfin connectivity with provided credentials — does not save config."""
+    _require_user(request)
+    jf = JellyfinClient(body.url.rstrip("/"), body.api_key)
+    h = jf.health()
+    libraries: list[dict] = []
+    if h["ok"]:
+        try:
+            raw = jf.get_libraries()
+            libraries = [
+                {"id": l.get("ItemId", l.get("Id", "")), "name": l.get("Name", ""), "type": l.get("CollectionType", "")}
+                for l in raw
+            ]
+        except Exception:
+            pass
+    return {"ok": h["ok"], "status": h["status"], "message": h["message"], "libraries": libraries}
+
+
+@router.post("/api/arr/test")
+async def arr_test(request: Request, body: _ArrTestReq):
+    """Health-check an arr instance with provided credentials — does not save config."""
+    _require_user(request)
+    if body.arr_type == "sonarr":
+        client: SonarrClient | RadarrClient = SonarrClient(body.url, body.api_key, "test")
+    elif body.arr_type == "radarr":
+        client = RadarrClient(body.url, body.api_key, "test")
+    else:
+        raise HTTPException(status_code=400, detail="arr_type must be sonarr or radarr")
+    return client.health()
+
+
+@router.post("/api/arr/rootfolders")
+async def arr_rootfolders_test(request: Request, body: _ArrTestReq):
+    """Fetch root folders from an arr instance with provided credentials — does not save config."""
+    _require_user(request)
+    if body.arr_type == "sonarr":
+        client: SonarrClient | RadarrClient = SonarrClient(body.url, body.api_key, "test")
+    elif body.arr_type == "radarr":
+        client = RadarrClient(body.url, body.api_key, "test")
+    else:
+        raise HTTPException(status_code=400, detail="arr_type must be sonarr or radarr")
+    try:
+        folders = client._get("/rootfolder")
+        return [{"path": f.get("path", ""), "freeSpace": f.get("freeSpace", 0)} for f in folders]
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
 @router.get("/api/sonarr/{instance_name}/rootfolders")
 async def sonarr_rootfolders(request: Request, instance_name: str):
     _require_user(request)
@@ -481,10 +541,10 @@ async def preview_image(
     opacity: float = 0.65,
     badge_size: str = "medium",
     text_color: str = "#ffffff",
-    video_color: str = "#1a7a6e",
-    audio_color: str = "#6b3a9e",
-    sub_color: str = "#c47a00",
-    rating_color: str = "#2d2d2d",
+    video_color: str = "#134e4a",
+    audio_color: str = "#1e3a8a",
+    sub_color: str = "#7c2d12",
+    rating_color: str = "#4c1d95",
     show_video: str = "true",
     show_audio: str = "true",
     show_subs: str = "true",
@@ -500,10 +560,10 @@ async def preview_image(
         badge_opacity=max(0.1, min(1.0, opacity)),
         badge_size=badge_size if badge_size in ("small", "medium", "large") else "medium",
         badge_text_color=text_color or "#ffffff",
-        video_badge_color=video_color or "#1a7a6e",
-        audio_badge_color=audio_color or "#6b3a9e",
-        sub_badge_color=sub_color or "#c47a00",
-        rating_badge_color=rating_color or "#2d2d2d",
+        video_badge_color=video_color or "#134e4a",
+        audio_badge_color=audio_color or "#1e3a8a",
+        sub_badge_color=sub_color or "#7c2d12",
+        rating_badge_color=rating_color or "#4c1d95",
         show_video_badges=show_video.lower() not in ("false", "0"),
         show_audio_badges=show_audio.lower() not in ("false", "0"),
         show_sub_badges=show_subs.lower() not in ("false", "0"),

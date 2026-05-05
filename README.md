@@ -214,6 +214,7 @@ The dev compose mounts the `app/` directory directly so code changes are picked 
 
 - **Scan history** — per-scan record with total runtime, items scanned, items skipped, images modified, and error counts; browsable in the web UI
 - **Media browser improvements** — series/movie name in the item column, audio and video codec columns (when enabled)
+- **Audio language override** — manually set the language for audio tracks that ffprobe returns as `UND` (undetermined); writes the corrected language tag to the file's metadata using ffmpeg
 - **Subtitle language tagging** — detect subtitle stream languages and surface them as `mf-sub-EN` tags and badge rows on posters
 - **Subtitle cleanup** — remove subtitle files/streams not matching a configured keep-list
 - **Jellyfin plugin** — native Jellyfin sidebar iframe integration via a C# `BasePlugin`
