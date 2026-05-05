@@ -115,7 +115,9 @@ class JellyfinClient:
         items = data.get("Items", [])
         return items[0] if items else {}
 
-    def set_managed_tags(self, item_id: str, item: dict, prefix: str, new_tags: list[str], fallback_rating: str = "") -> None:
+    def set_managed_tags(
+        self, item_id: str, item: dict, prefix: str, new_tags: list[str], fallback_rating: str = ""
+    ) -> None:
         """Replace all prefix-managed tags on the item with new_tags (Jellyfin 10.9+ PUT approach).
 
         fallback_rating is written to OfficialRating only when the item's own field is blank.
