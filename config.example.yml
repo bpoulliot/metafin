@@ -18,14 +18,20 @@ jellyfin:
 #       api_key: ""
 
 scan:
-  schedule: "0 3 * * *"    # cron expression; empty = manual-only
+  schedule: "0 3 * * *"  # cron expression; empty = manual-only
   incremental: true
-  path_filters: []  # list of path prefixes to include (e.g. /data/movies); empty = all
+  path_filters: []        # path prefixes to restrict scanning (e.g. /media/movies); empty = all
+  max_workers: 4          # parallel ffprobe workers; lower for slow/spinning disks
 
 tags:
-  managed_prefix: "mf-"        # prefix for all tags written by Metafin
+  managed_prefix: "mf-"
   dual_audio_tag: "dual-audio"  # applied when exactly 2 audio languages found
   multi_audio_tag: "re-encode"  # applied when 3+ audio languages found
+  destinations:
+    video:     [poster, jellyfin, sonarr, radarr]
+    audio:     [poster, jellyfin, sonarr, radarr]
+    subtitles: [poster, jellyfin]
+    rating:    [poster]
 
 image:
   targets:
@@ -34,9 +40,19 @@ image:
     - folder.jpg
     - folder.png
   backup_suffix: ".orig"
-  badge_position: bottom-left   # bottom-left | bottom-right | top-left | top-right
+  badge_position: bottom-left  # bottom-left | bottom-right | top-left | top-right
   badge_opacity: 0.65
-  font_size: 20
+  badge_size: tv               # desktop | tv | tv_plus (see README for guidance)
+  badge_text_color: "#ffffff"
+  video_badge_color:  "#134e4a"
+  audio_badge_color:  "#1e3a8a"
+  sub_badge_color:    "#7c2d12"
+  rating_badge_color: "#4c1d95"
+  show_video_badges:  true
+  show_audio_badges:  true
+  show_sub_badges:    true
+  show_rating_badge:  true
+  normalize_portrait: true     # pad non-portrait images to 2:3 before overlaying
 
 auth:
   username: admin
