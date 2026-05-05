@@ -244,6 +244,14 @@
       <div class="log-box" id="log-box"></div>
     </div>
 
+    <div class="card full" id="errors-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h2 style="margin:0">Scan errors <span id="errors-count" style="font-size:11px;font-weight:400;color:var(--muted)"></span></h2>
+        <button class="btn sm danger" id="btn-clear-errors" onclick="clearScanErrors()" style="display:none">Clear all</button>
+      </div>
+      <div id="errors-body" style="color:var(--muted);font-size:13px">Loading…</div>
+    </div>
+
     <div class="card full">
       <h2>Media browser</h2>
       <div class="filter-row">
@@ -938,7 +946,7 @@ async function pollProgress() {
         cancelBtn.textContent = '✕ Cancel';
         lbl.textContent = d.cancelled ? 'Cancelled' : `Done (${d.done} items)`;
         if (sseSource) { sseSource.close(); sseSource = null; }
-        loadStats(); loadMedia();
+        loadStats(); loadMedia(); loadScanErrors();
         break;
       }
     } catch {}
@@ -1569,10 +1577,48 @@ const setSelectVal = (id, v) => { const el = document.getElementById(id); if (el
 const esc = s => (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+// ═══════════════════════ SCAN ERRORS ═══════════════════════
+async function loadScanErrors() {
+  const body = document.getElementById('errors-body');
+  const countEl = document.getElementById('errors-count');
+  const clearBtn = document.getElementById('btn-clear-errors');
+  try {
+    const d = await apiFetch('/api/scan-errors');
+    const errors = d.errors || [];
+    if (!errors.length) {
+      body.innerHTML = '<span style="color:var(--green);font-size:13px">No errors detected</span>';
+      countEl.textContent = '';
+      clearBtn.style.display = 'none';
+      return;
+    }
+    countEl.textContent = `(${errors.length})`;
+    clearBtn.style.display = '';
+    const typeLabel = t => t === 'probe_failed'
+      ? '<span style="color:var(--red)">ffprobe failed</span>'
+      : '<span style="color:var(--yellow)">file not found</span>';
+    body.innerHTML = `<div style="overflow-x:auto"><table>
+      <thead><tr><th>Item</th><th>Error</th><th>Path</th><th>Scans</th><th>Last seen</th></tr></thead>
+      <tbody>${errors.map(e => `<tr>
+        <td title="${e.item_id||''}">${e.item_name||e.item_id||'—'}</td>
+        <td>${typeLabel(e.error_type)}</td>
+        <td style="font-size:11px;color:var(--muted);max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${e.file_path||''}">${e.file_path||'—'}</td>
+        <td style="color:var(--muted)">${e.scan_count}</td>
+        <td style="color:var(--muted);font-size:11px">${e.last_seen ? fmt(e.last_seen) : '—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  } catch { body.innerHTML = '<span style="color:var(--muted)">—</span>'; }
+}
+
+async function clearScanErrors() {
+  await apiFetch('/api/scan-errors', {method:'DELETE'});
+  loadScanErrors();
+}
+
 // ═══════════════════════ INIT ═══════════════════════
 loadStats();
 loadHealth();
 loadMedia();
+loadScanErrors();
 // Pre-load settings so preview controls are ready before the user visits the tab
 apiFetch('/api/settings').then(s => { settings = s; populateForm(s); }).catch(() => {});
 setInterval(loadStats, 30000);

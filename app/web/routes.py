@@ -30,7 +30,7 @@ from ..overlay import BadgeGroup, clear_pill_cache, generate_preview_bytes
 from ..pipeline import progress, run_full_scan, run_incremental_scan
 from ..preview_samples import ensure_sample_posters
 from ..scheduler import next_run_time, reschedule
-from ..state import MediaState, get_media_filtered, get_session, get_stats
+from ..state import MediaState, clear_scan_errors, get_media_filtered, get_scan_errors, get_session, get_stats
 from .schemas import (
     ConfigResponse,
     ConfigSaveRequest,
@@ -272,6 +272,32 @@ async def media_list(
         "per_page": per_page,
         "items": [MediaItem(**i) for i in items],
     }
+
+
+# ---------------------------------------------------------------------------
+# Scan errors
+# ---------------------------------------------------------------------------
+
+
+@router.get("/api/scan-errors")
+async def scan_errors_list(request: Request):
+    _require_user(request)
+    session = get_session()
+    try:
+        return {"errors": get_scan_errors(session)}
+    finally:
+        session.close()
+
+
+@router.delete("/api/scan-errors")
+async def scan_errors_clear(request: Request):
+    _require_user(request)
+    session = get_session()
+    try:
+        clear_scan_errors(session)
+    finally:
+        session.close()
+    return {"status": "cleared"}
 
 
 # ---------------------------------------------------------------------------

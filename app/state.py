@@ -54,6 +54,19 @@ class ScanRun(Base):
     scan_type = Column(String)  # "full" | "incremental"
 
 
+class ScanError(Base):
+    __tablename__ = "scan_errors"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    item_id = Column(String, index=True)
+    item_name = Column(Text)
+    file_path = Column(Text)
+    error_type = Column(String)  # "probe_failed" | "no_file"
+    first_seen = Column(DateTime, default=datetime.utcnow)
+    last_seen = Column(DateTime, default=datetime.utcnow)
+    scan_count = Column(Integer, default=1)
+
+
 def _configure_sqlite(dbapi_conn, _connection_record) -> None:
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
@@ -203,6 +216,55 @@ def finish_scan_run(session: Session, run: ScanRun, scanned: int, tagged: int, i
 
 def get_last_scan(session: Session) -> ScanRun | None:
     return session.query(ScanRun).order_by(ScanRun.completed_at.desc()).first()
+
+
+def upsert_scan_error(
+    session: Session,
+    item_id: str,
+    item_name: str,
+    file_path: str,
+    error_type: str,
+) -> None:
+    now = datetime.utcnow()
+    existing = session.query(ScanError).filter_by(item_id=item_id, error_type=error_type).first()
+    if existing:
+        existing.last_seen = now
+        existing.scan_count = (existing.scan_count or 1) + 1
+        existing.file_path = file_path
+        existing.item_name = item_name
+    else:
+        session.add(ScanError(
+            item_id=item_id,
+            item_name=item_name,
+            file_path=file_path,
+            error_type=error_type,
+            first_seen=now,
+            last_seen=now,
+            scan_count=1,
+        ))
+    session.commit()
+
+
+def get_scan_errors(session: Session) -> list[dict]:
+    rows = session.query(ScanError).order_by(ScanError.last_seen.desc()).all()
+    return [
+        {
+            "id": r.id,
+            "item_id": r.item_id,
+            "item_name": r.item_name,
+            "file_path": r.file_path,
+            "error_type": r.error_type,
+            "first_seen": r.first_seen.isoformat() if r.first_seen else None,
+            "last_seen": r.last_seen.isoformat() if r.last_seen else None,
+            "scan_count": r.scan_count,
+        }
+        for r in rows
+    ]
+
+
+def clear_scan_errors(session: Session) -> None:
+    session.query(ScanError).delete()
+    session.commit()
 
 
 def get_stats(session: Session) -> dict:
