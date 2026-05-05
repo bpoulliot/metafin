@@ -218,6 +218,28 @@ def get_last_scan(session: Session) -> ScanRun | None:
     return session.query(ScanRun).order_by(ScanRun.completed_at.desc()).first()
 
 
+def get_recent_scans(session: Session, limit: int = 10) -> list[dict]:
+    runs = session.query(ScanRun).order_by(ScanRun.started_at.desc()).limit(limit).all()
+    result = []
+    for r in runs:
+        duration = None
+        if r.completed_at and r.started_at:
+            duration = int((r.completed_at - r.started_at).total_seconds())
+        result.append(
+            {
+                "id": r.id,
+                "scan_type": r.scan_type,
+                "started_at": r.started_at.isoformat() if r.started_at else None,
+                "completed_at": r.completed_at.isoformat() if r.completed_at else None,
+                "items_scanned": r.items_scanned,
+                "items_tagged": r.items_tagged,
+                "items_image_modified": r.items_image_modified,
+                "duration_seconds": duration,
+            }
+        )
+    return result
+
+
 def upsert_scan_error(
     session: Session,
     item_id: str,

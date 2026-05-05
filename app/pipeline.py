@@ -350,7 +350,6 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
         to_probe.append((item, file_path, item_root, mtime))
 
     # Phase 2: parallel ffprobe — pure I/O, no shared state writes
-    # progress.done is incremented here as each future completes so the UI stays live
     max_workers = min(cfg.scan.max_workers, max(1, len(to_probe)))
     probe_results: dict[str, MediaInfo | None] = {}
     if to_probe:
@@ -364,10 +363,8 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
                 except Exception as exc:
                     log.warning("probe_file error for %s: %s", fp, exc)
                     probe_results[fp] = None
-                progress.done += 1
 
     # Phase 3: tag, overlay, and persist results (sequential — SQLite writes, API calls)
-    # progress.done was already advanced in Phase 2; reset current_item only
     for item, file_path, item_root, mtime in to_probe:
         if progress.cancelled:
             progress.emit("[metafin] Scan cancelled by user")
@@ -381,6 +378,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
         if info is None:
             progress.emit(f"  ffprobe failed: {name} | path: {file_path}")
             upsert_scan_error(session, item_id, name, file_path, "probe_failed")
+            progress.done += 1
             continue
 
         progress.emit(f"  scanning: {name}")
@@ -483,6 +481,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
             f" | audio: {len(info.audio_tracks)} | subs: {len(info.subtitle_tracks)}"
             f" | tags: {jf_tags}"
         )
+        progress.done += 1
 
     set_meta(session, _TAG_CONFIG_KEY, current_hash)
     finish_scan_run(session, run, scanned=len(items), tagged=tagged, images=images_modified)
