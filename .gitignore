@@ -1,0 +1,26 @@
+# Secrets and state
+config.yml
+state.db
+state.db-shm
+state.db-wal
+.env
+.env.local
+
+# Generated/cached
+app/static/preview_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+htmlcov/
+.coverage
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log

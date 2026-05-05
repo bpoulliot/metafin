@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metafin</title>
+<link rel="icon" href="/static/favicon.png" type="image/png">
+<style>
+  :root {
+    --bg:#060d1a; --surface:#0c1828; --surface2:#122035; --border:#1a3554;
+    --text:#ddeeff; --muted:#6ba3c8; --accent:#22d3ee;
+    --green:#34d399; --red:#f87171; --yellow:#fbbf24; --badge-bg:#122035;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font:14px/1.5 "Segoe UI",system-ui,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+
+  /* ── Header ── */
+  header{display:flex;align-items:center;gap:10px;padding:12px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+  header{padding:14px 24px}
+  header img{width:48px;height:48px;border-radius:50%;object-fit:cover}
+  header h1{font-size:20px;font-weight:700}
+  .nav{display:flex;gap:2px;margin-left:32px}
+  .nav-btn{padding:8px 18px;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;background:none;border:none;color:var(--muted)}
+  .nav-btn.active,.nav-btn:hover{color:var(--text);background:var(--surface2)}
+  .nav-btn.active{color:var(--accent)}
+  .header-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .logout-btn{font-size:12px;color:var(--muted);cursor:pointer;background:none;border:none;padding:4px 8px;border-radius:4px}
+  .logout-btn:hover{color:var(--text);background:var(--surface2)}
+
+  /* ── Layout ── */
+  .page{display:none;padding:20px 24px}
+  .page.active{display:block}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:800px){.grid{grid-template-columns:1fr}}
+  .full{grid-column:1/-1}
+
+  /* ── Cards ── */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px}
+  .card h2{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+
+  /* ── Buttons ── */
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--badge-bg);color:var(--text);font-size:13px;cursor:pointer;transition:background .15s}
+  .btn:hover{background:#1a3050}
+  .btn.primary{background:#0c4060;border-color:#0891b2}
+  .btn.primary:hover{background:#0d5c80}
+  .btn.danger{background:#1a0a14;border-color:#f87171;color:#f87171}
+  .btn.danger:hover{background:#2a0f1f}
+  .btn.sm{padding:3px 10px;font-size:12px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
+
+  /* ── Stats ── */
+  .stat-row{display:flex;gap:24px;flex-wrap:wrap}
+  .stat{display:flex;flex-direction:column}
+  .stat .val{font-size:26px;font-weight:700;color:var(--accent)}
+  .stat .lbl{font-size:11px;color:var(--muted)}
+
+  /* ── Progress ── */
+  .progress-wrap{margin-top:12px}
+  .progress-bar-bg{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+  .progress-bar{height:100%;background:var(--accent);transition:width .3s}
+  .progress-label{font-size:11px;color:var(--muted);margin-top:4px}
+
+  /* ── Log ── */
+  .log-box{background:#030a16;border:1px solid var(--border);border-radius:6px;height:200px;overflow-y:auto;padding:10px;font:12px/1.6 "Cascadia Code","Fira Mono",monospace;color:#90c0dc}
+  .log-box .line.ok{color:var(--green)}
+  .log-box .line.err{color:var(--red)}
+
+  /* ── Health cards ── */
+  .health-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .health-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+  .health-card-header{display:flex;align-items:center;gap:10px}
+  .health-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+  .health-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .health-dot.warn{background:var(--yellow);box-shadow:0 0 6px var(--yellow)}
+  .health-dot.fail{background:var(--red);box-shadow:0 0 6px var(--red)}
+  .health-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .health-msg{font-size:11px;color:var(--muted);padding-left:22px}
+
+  /* ── Media table ── */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:600;text-transform:uppercase}
+  td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr:hover td{background:var(--surface)}
+  .badge{display:inline-block;padding:1px 7px;border-radius:4px;background:var(--badge-bg);font-size:11px;font-weight:600;border:1px solid var(--border);margin:1px}
+  .badge.res-4K{color:#ffa657;border-color:#7a4400;background:#1a1000}
+  .badge.res-1080p{color:var(--accent)}
+  .badge.res-720p{color:#a8d8ff}
+  .badge.tag-dual{color:var(--green);border-color:#2a8a3a;background:#091a0c}
+  .badge.tag-multi{color:var(--yellow);border-color:#9e6a03;background:#1a1200}
+  .filter-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+  input.filter{background:var(--badge-bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 10px;font-size:13px}
+
+  /* ── Preview page ── */
+  .preview-disclaimer{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--muted);margin-bottom:16px}
+
+  .prev-controls-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+  .prev-ctrl-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;display:block}
+  .prev-ctrl-label span{font-weight:400;text-transform:none;letter-spacing:0;color:var(--text)}
+  .prev-ctrl-group{display:flex;flex-direction:column}
+  .prev-ctrl-group select,.prev-ctrl-group input[type=text]{background:var(--badge-bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 8px;font-size:13px;width:100%}
+  .prev-ctrl-group select:focus,.prev-ctrl-group input:focus{outline:none;border-color:var(--accent)}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .size-btn-group{display:flex;gap:0;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .size-btn{flex:1;padding:5px 0;font-size:13px;font-weight:500;cursor:pointer;background:var(--badge-bg);color:var(--muted);border:none;border-right:1px solid var(--border);transition:background .15s,color .15s}
+  .size-btn:last-child{border-right:none}
+  .size-btn.active{background:var(--accent);color:#fff}
+
+  .color-row{display:flex;gap:8px;align-items:center}
+  input[type=color]{width:34px;height:30px;padding:2px;border-radius:4px;border:1px solid var(--border);cursor:pointer;background:none;flex-shrink:0}
+  .hex-input{flex:1;min-width:0;padding:4px 8px;background:var(--badge-bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;font-family:"Cascadia Code","Fira Mono",monospace}
+  .hex-input:focus{outline:none;border-color:var(--accent)}
+
+  .contrast-box{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;display:flex;flex-direction:column;gap:3px;justify-content:center}
+  .contrast-ratio{font-size:16px;font-weight:700;color:var(--text)}
+  .contrast-status{font-size:11px;font-weight:600}
+  .contrast-status.pass{color:var(--green)}
+  .contrast-status.fail{color:var(--red)}
+  .contrast-req{font-size:10px;color:var(--muted)}
+
+  .poster-source-bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:12px}
+  .psb-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;flex-shrink:0}
+  .psb-opt{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;user-select:none}
+  .psb-opt input[type=radio]{accent-color:var(--accent);cursor:pointer}
+  .psb-divider{width:1px;height:18px;background:var(--border);flex-shrink:0}
+  .psb-actions{display:flex;align-items:center;gap:8px}
+  .preview-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;width:80%;max-width:700px;margin:0 auto}
+  .preview-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden;display:flex;flex-direction:column}
+  .preview-card img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:var(--surface2)}
+  .preview-card .pc-body{padding:6px}
+  .preview-card .pc-label{font-size:10px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .preview-card .pc-tags{display:flex;flex-wrap:wrap;gap:2px}
+  .preview-card .pc-tag{font-size:10px;padding:1px 5px;border-radius:3px;background:var(--badge-bg);border:1px solid var(--border);color:var(--muted)}
+  .preview-card .pc-tag.dual{color:var(--green);border-color:#2a8a3a;background:#091a0c}
+  .preview-card .pc-tag.multi{color:var(--yellow);border-color:#9e6a03;background:#1a1200}
+  .save-status{font-size:12px}
+  .save-status.ok{color:var(--green)}
+  .save-status.err{color:var(--red)}
+
+  /* ── Settings form ── */
+  .settings-section{margin-bottom:20px}
+  .section-header{font-size:13px;font-weight:600;color:var(--text);padding:10px 14px;background:var(--surface2);border-radius:6px 6px 0 0;border:1px solid var(--border);border-bottom:none;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+  .section-header .chevron{margin-left:auto;transition:transform .2s;font-size:11px}
+  .section-header.collapsed .chevron{transform:rotate(-90deg)}
+  .section-body{border:1px solid var(--border);border-radius:0 0 6px 6px;padding:14px;background:var(--surface)}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+  .field input[type=text],.field input[type=password],.field input[type=url],.field select,.field textarea{width:100%;padding:7px 10px;border-radius:6px;border:1px solid var(--border);background:#040c1c;color:var(--text);font-size:13px}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
+  .field .hint{font-size:11px;color:var(--muted);margin-top:3px}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:600px){.field-row{grid-template-columns:1fr}}
+  .inline-row{display:flex;align-items:center;gap:8px}
+  .inline-row input[type=text]{flex:1}
+
+  /* Instance cards */
+  .instance-card{border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;background:var(--surface2);position:relative}
+  .instance-card .inst-name{font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px}
+  .remove-inst{position:absolute;top:10px;right:10px;font-size:11px;padding:2px 8px}
+  .add-inst-btn{margin-top:4px}
+
+  /* Library checkboxes */
+  .lib-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .lib-item{display:flex;align-items:center;gap:8px;font-size:13px}
+  .lib-item input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px}
+
+  /* Path filter tags */
+  .path-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .path-tag{display:flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:12px}
+  .path-tag button{background:none;border:none;color:var(--muted);cursor:pointer;padding:0;font-size:13px;line-height:1}
+  .path-tag button:hover{color:var(--red)}
+
+  /* Toggle */
+  .toggle-wrap{display:flex;align-items:center;gap:8px}
+  .toggle{position:relative;display:inline-block;width:36px;height:20px}
+  .toggle input{opacity:0;width:0;height:0}
+  .slider{position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:20px;transition:.2s}
+  .slider:before{position:absolute;content:"";width:14px;height:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+  input:checked+.slider{background:var(--accent)}
+  input:checked+.slider:before{transform:translateX(16px)}
+
+  /* Destination grid */
+  .dest-grid{width:100%;border-collapse:collapse;font-size:12px}
+  .dest-grid th,.dest-grid td{padding:6px 10px;border:1px solid var(--border)}
+  .dest-grid th:not(:first-child),.dest-grid td:not(:first-child){text-align:center}
+  .dest-grid input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
+  .dest-grid tr:hover td{background:var(--surface2)}
+  .cat-color-grid{display:grid;grid-template-columns:100px 1fr auto;gap:5px 10px;align-items:center;margin-top:6px}
+
+  /* Save bar */
+  .save-bar{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px;margin:-20px -24px;margin-top:16px;padding-left:24px;padding-right:24px}
+  .yaml-toggle{margin-left:auto;font-size:12px;color:var(--accent);cursor:pointer;background:none;border:none}
+  .yaml-wrap{margin-top:12px;display:none}
+  .yaml-wrap textarea{width:100%;height:300px;background:#040c1c;color:#8ab8d4;border:1px solid var(--border);border-radius:6px;padding:12px;font:13px/1.6 "Cascadia Code","Fira Mono",monospace;resize:vertical}
+</style>
+</head>
+<body>
+
+<header>
+  <img src="/static/logo.png" onerror="this.style.display='none'" alt="Metafin">
+  <h1>Metafin</h1>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="switchPage('dashboard')">Dashboard</button>
+    <button class="nav-btn" onclick="switchPage('preview')">Preview</button>
+    <button class="nav-btn" onclick="switchPage('settings')">Settings</button>
+  </nav>
+  <div class="header-right">
+    <form method="post" action="/logout" style="margin:0">
+      <button class="logout-btn" type="submit">Sign out</button>
+    </form>
+  </div>
+</header>
+
+<!-- ═══════════════════════ DASHBOARD ═══════════════════════ -->
+<div class="page active" id="page-dashboard">
+  <div class="grid">
+    <div class="card">
+      <h2>Overview</h2>
+      <div class="stat-row">
+        <div class="stat"><span class="val" id="stat-tagged">—</span><span class="lbl">Items tagged</span></div>
+        <div class="stat"><span class="val" id="stat-images">—</span><span class="lbl">Images modified</span></div>
+        <div class="stat"><span class="val" id="stat-last" style="font-size:13px;line-height:2">—</span><span class="lbl">Last scan</span></div>
+        <div class="stat"><span class="val" id="stat-next" style="font-size:13px;line-height:2">—</span><span class="lbl">Next scan</span></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="btn-inc" onclick="triggerScan('incremental')">▶ Incremental scan</button>
+        <button class="btn" id="btn-full" onclick="triggerScan('full')">⟳ Full rescan</button>
+        <button class="btn" id="btn-cancel" onclick="cancelScan()" style="display:none;color:#e05a5a;border-color:#e05a5a">✕ Cancel</button>
+      </div>
+      <div class="progress-wrap" id="progress-wrap" style="display:none">
+        <div class="progress-bar-bg"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+        <div class="progress-label" id="progress-label">Starting…</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Service health</h2>
+      <div id="health-list" class="health-grid">Loading…</div>
+    </div>
+
+    <div class="card full">
+      <h2>Activity log</h2>
+      <div class="log-box" id="log-box"></div>
+    </div>
+
+    <div class="card full">
+      <h2>Media browser</h2>
+      <div class="filter-row">
+        <input class="filter" id="filter-res" placeholder="Resolution (e.g. 1080p)" oninput="loadMedia()">
+        <input class="filter" id="filter-lang" placeholder="Language (e.g. JA)" oninput="loadMedia()">
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Item</th><th>Source</th><th>Video</th><th>Audio</th><th>Rating</th><th>Tags</th><th>Scanned</th></tr></thead>
+          <tbody id="media-tbody"><tr><td colspan="7" style="color:var(--muted);text-align:center;padding:24px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div id="media-page-info" style="margin-top:8px;font-size:11px;color:var(--muted)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ PREVIEW ═══════════════════════ -->
+<div class="page" id="page-preview">
+
+  <div class="preview-disclaimer">
+    ⚠ These are preview images only — badges are composited onto your Jellyfin posters for reference.
+    Poster images are fetched live from your library and are not modified here.
+    Save and re-run a scan to apply changes to your actual media files.
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h2>Badge settings</h2>
+
+    <div class="prev-controls-grid">
+
+      <div class="prev-ctrl-group">
+        <span class="prev-ctrl-label">Position</span>
+        <select id="prev-position" onchange="onPreviewChange()">
+          <option value="bottom-left">Bottom-left</option>
+          <option value="bottom-right">Bottom-right</option>
+          <option value="top-left">Top-left</option>
+          <option value="top-right">Top-right</option>
+        </select>
+      </div>
+
+      <div class="prev-ctrl-group">
+        <span class="prev-ctrl-label">Opacity — <span id="prev-opacity-val">65%</span></span>
+        <input type="range" id="prev-opacity" min="10" max="100" value="65"
+          oninput="document.getElementById('prev-opacity-val').textContent=this.value+'%'; onPreviewChange()">
+      </div>
+
+      <div class="prev-ctrl-group">
+        <span class="prev-ctrl-label">Badge size</span>
+        <div class="size-btn-group" id="prev-badge-size">
+          <button class="size-btn" data-size="small" onclick="setBadgeSize('small')">Small</button>
+          <button class="size-btn active" data-size="medium" onclick="setBadgeSize('medium')">Medium</button>
+          <button class="size-btn" data-size="large" onclick="setBadgeSize('large')">Large</button>
+        </div>
+      </div>
+
+      <div class="full" style="margin-top:4px">
+        <span class="prev-ctrl-label">Badge colors &amp; visibility</span>
+        <div class="cat-color-grid">
+          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px">Category</span>
+          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px">Color</span>
+          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px">Show</span>
+
+          <span style="font-size:12px;color:#2ab5a3;font-weight:600">Video</span>
+          <div class="color-row">
+            <input type="color" id="prev-video-color" value="#1a7a6e" oninput="syncCatHex('video'); onColorChange()">
+            <input type="text" id="prev-video-hex" value="#1a7a6e" class="hex-input" maxlength="7" oninput="syncCatPicker('video'); onColorChange()">
+          </div>
+          <label class="toggle"><input type="checkbox" id="prev-show-video" checked onchange="onPreviewChange()"><span class="slider"></span></label>
+
+          <span style="font-size:12px;color:#a87de0;font-weight:600">Audio</span>
+          <div class="color-row">
+            <input type="color" id="prev-audio-color" value="#6b3a9e" oninput="syncCatHex('audio'); onColorChange()">
+            <input type="text" id="prev-audio-hex" value="#6b3a9e" class="hex-input" maxlength="7" oninput="syncCatPicker('audio'); onColorChange()">
+          </div>
+          <label class="toggle"><input type="checkbox" id="prev-show-audio" checked onchange="onPreviewChange()"><span class="slider"></span></label>
+
+          <span style="font-size:12px;color:#e09030;font-weight:600">Subtitles</span>
+          <div class="color-row">
+            <input type="color" id="prev-sub-color" value="#a86200" oninput="syncCatHex('sub'); onColorChange()">
+            <input type="text" id="prev-sub-hex" value="#a86200" class="hex-input" maxlength="7" oninput="syncCatPicker('sub'); onColorChange()">
+          </div>
+          <label class="toggle"><input type="checkbox" id="prev-show-subs" checked onchange="onPreviewChange()"><span class="slider"></span></label>
+
+          <span style="font-size:12px;color:#999;font-weight:600">Rating</span>
+          <div class="color-row">
+            <input type="color" id="prev-rating-color" value="#2d2d2d" oninput="syncCatHex('rating'); onColorChange()">
+            <input type="text" id="prev-rating-hex" value="#2d2d2d" class="hex-input" maxlength="7" oninput="syncCatPicker('rating'); onColorChange()">
+          </div>
+          <label class="toggle"><input type="checkbox" id="prev-show-rating" checked onchange="onPreviewChange()"><span class="slider"></span></label>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-top:10px">
+          <div style="flex:1">
+            <span class="prev-ctrl-label">Text color (all categories)</span>
+            <div class="color-row">
+              <input type="color" id="prev-text-color" value="#ffffff" oninput="syncHex('text'); onColorChange()">
+              <input type="text" id="prev-text-hex" value="#ffffff" class="hex-input" maxlength="7" placeholder="#ffffff"
+                oninput="syncPicker('text'); onColorChange()">
+            </div>
+          </div>
+          <div class="contrast-box" id="contrast-box" style="flex:1">
+            <div class="contrast-ratio" id="contrast-ratio">—</div>
+            <div class="contrast-status" id="contrast-status"></div>
+            <div class="contrast-req" id="contrast-req"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="prev-ctrl-group">
+        <span class="prev-ctrl-label">Tag prefix</span>
+        <input type="text" id="prev-prefix" value="mf-" oninput="onPreviewChange()">
+      </div>
+
+      <div class="prev-ctrl-group">
+        <span class="prev-ctrl-label">Dual-audio label</span>
+        <input type="text" id="prev-dual" value="dual-audio" oninput="onPreviewChange()">
+      </div>
+
+      <div class="prev-ctrl-group">
+        <span class="prev-ctrl-label">Multi-audio label</span>
+        <input type="text" id="prev-multi" value="re-encode" oninput="onPreviewChange()">
+      </div>
+
+    </div>
+
+    <div class="btn-row">
+      <button class="btn primary" id="btn-save-preview" onclick="savePreviewSettings()">💾 Save badge settings</button>
+      <span class="save-status" id="preview-save-status"></span>
+    </div>
+  </div>
+
+  <div class="poster-source-bar">
+    <span class="psb-label">Preview backgrounds</span>
+    <label class="psb-opt">
+      <input type="radio" name="poster-source" id="src-synthetic" value="synthetic" checked onchange="onPosterSourceChange()">
+      Synthetic test images
+    </label>
+    <label class="psb-opt">
+      <input type="radio" name="poster-source" id="src-jellyfin" value="jellyfin" onchange="onPosterSourceChange()">
+      My Jellyfin library
+    </label>
+    <div class="psb-divider"></div>
+    <div class="psb-actions" id="jf-poster-actions" style="display:none">
+      <button class="btn sm" onclick="fetchJellyfinPosters()">Fetch from Jellyfin</button>
+      <button class="btn sm" id="btn-refresh-jf" onclick="fetchJellyfinPosters()" style="display:none">↺ Refresh</button>
+      <span id="jf-poster-status" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+  </div>
+
+  <div class="preview-grid" id="preview-grid">
+    <div style="color:var(--muted);padding:24px;grid-column:1/-1;text-align:center">Loading previews…</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ SETTINGS ═══════════════════════ -->
+<div class="page" id="page-settings">
+
+  <!-- Authentication -->
+  <div class="settings-section">
+    <div class="section-header" onclick="toggleSection(this)">
+      🔑 Authentication <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="field-row">
+        <div class="field">
+          <label>Username</label>
+          <input type="text" id="s-auth-username">
+        </div>
+        <div class="field">
+          <label>Current password</label>
+          <input type="password" id="s-auth-current" placeholder="Required to change password">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>New password</label>
+          <input type="password" id="s-auth-new" placeholder="Leave blank to keep current">
+        </div>
+        <div class="field">
+          <label>Confirm new password</label>
+          <input type="password" id="s-auth-confirm">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn sm" onclick="changePassword()">Change password</button>
+        <span id="pw-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Jellyfin -->
+  <div class="settings-section">
+    <div class="section-header" onclick="toggleSection(this)">
+      🎬 Jellyfin <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="field-row">
+        <div class="field">
+          <label>Server URL</label>
+          <input type="url" id="s-jf-url" placeholder="http://jellyfin:8096">
+        </div>
+        <div class="field">
+          <label>API Key</label>
+          <input type="password" id="s-jf-apikey" placeholder="Dashboard → API Keys">
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn sm" onclick="fetchLibraries()">Fetch libraries</button>
+        <span id="jf-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>Libraries to scan <span style="font-weight:400;text-transform:none">(empty = all)</span></label>
+        <div id="lib-list" class="lib-list" style="color:var(--muted);font-size:12px">Click "Fetch libraries" to load.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sonarr -->
+  <div class="settings-section">
+    <div class="section-header" onclick="toggleSection(this)">
+      📺 Sonarr instances <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div id="sonarr-instances"></div>
+      <button class="btn sm add-inst-btn" onclick="addInstance('sonarr')">+ Add Sonarr instance</button>
+    </div>
+  </div>
+
+  <!-- Radarr -->
+  <div class="settings-section">
+    <div class="section-header" onclick="toggleSection(this)">
+      🎥 Radarr instances <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div id="radarr-instances"></div>
+      <button class="btn sm add-inst-btn" onclick="addInstance('radarr')">+ Add Radarr instance</button>
+    </div>
+  </div>
+
+  <!-- Scan schedule -->
+  <div class="settings-section">
+    <div class="section-header" onclick="toggleSection(this)">
+      ⏱ Scan schedule &amp; scope <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="field-row">
+        <div class="field" style="flex:2">
+          <label>Scan frequency</label>
+          <div id="schedule-builder" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px">
+            <select id="s-sched-freq" onchange="onFreqChange()" style="min-width:160px">
+              <option value="manual">Manual only</option>
+              <option value="every-n">Every N hours</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="custom">Custom cron…</option>
+            </select>
+            <span id="sched-n-wrap" style="display:none;align-items:center;gap:6px">
+              every
+              <select id="s-sched-n" onchange="onFreqChange()">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="6">6</option>
+                <option value="8">8</option>
+                <option value="12">12</option>
+              </select>
+              hours
+            </span>
+            <span id="sched-time-wrap" style="display:inline-flex;align-items:center;gap:6px">
+              at
+              <select id="s-sched-hour" onchange="onFreqChange()">
+                <!-- populated by initScheduleHours() -->
+              </select>
+            </span>
+            <span id="sched-day-wrap" style="display:none;align-items:center;gap:6px">
+              on
+              <select id="s-sched-day" onchange="onFreqChange()">
+                <option value="0">Sunday</option>
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+              </select>
+            </span>
+            <input type="text" id="s-sched-custom" placeholder="0 3 * * *" style="display:none;width:160px" oninput="onFreqChange()">
+          </div>
+          <div class="hint" id="cron-hint"></div>
+        </div>
+        <div class="field" style="display:flex;flex-direction:column;justify-content:center">
+          <label>Incremental scan</label>
+          <div class="toggle-wrap" style="margin-top:8px">
+            <label class="toggle"><input type="checkbox" id="s-scan-incremental" checked><span class="slider"></span></label>
+            <span style="font-size:12px;color:var(--muted)">Skip unchanged files</span>
+          </div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:4px">
+        <label>Path filter <span style="font-weight:400;text-transform:none">(restrict scan to these path prefixes — empty = all media)</span></label>
+        <div class="inline-row" style="margin-top:6px">
+          <input type="text" id="s-path-filter-input" placeholder="/mnt/media/4K">
+          <button class="btn sm" onclick="addPathFilter()">+ Add path</button>
+        </div>
+        <div class="path-tags" id="path-tags"></div>
+        <div style="margin-top:8px">
+          <button class="btn sm" onclick="fetchRootFolders()">Fetch root folders from *arr</button>
+          <div id="rootfolder-list" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Badge Appearance -->
+  <div class="settings-section">
+    <div class="section-header" onclick="toggleSection(this)">
+      🎨 Badge appearance <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="field" style="max-width:280px">
+        <label>Text color (all categories)</label>
+        <div class="color-row">
+          <input type="color" id="s-badge-text-color" value="#ffffff" oninput="syncSettingsHex('badge-text')">
+          <input type="text" id="s-badge-text-hex" value="#ffffff" class="hex-input" maxlength="7" oninput="syncSettingsPicker('badge-text')">
+        </div>
+      </div>
+      <table class="dest-grid" style="margin-top:10px">
+        <thead><tr><th>Category</th><th>Fill color</th><th>Show on poster</th></tr></thead>
+        <tbody>
+          <tr>
+            <td style="color:#2ab5a3;font-weight:600">Video</td>
+            <td><div class="color-row"><input type="color" id="s-video-color" value="#1a7a6e" oninput="syncSettingsHex('video')"><input type="text" id="s-video-hex" value="#1a7a6e" class="hex-input" maxlength="7" oninput="syncSettingsPicker('video')"></div></td>
+            <td><label class="toggle"><input type="checkbox" id="s-show-video" checked><span class="slider"></span></label></td>
+          </tr>
+          <tr>
+            <td style="color:#a87de0;font-weight:600">Audio</td>
+            <td><div class="color-row"><input type="color" id="s-audio-color" value="#6b3a9e" oninput="syncSettingsHex('audio')"><input type="text" id="s-audio-hex" value="#6b3a9e" class="hex-input" maxlength="7" oninput="syncSettingsPicker('audio')"></div></td>
+            <td><label class="toggle"><input type="checkbox" id="s-show-audio" checked><span class="slider"></span></label></td>
+          </tr>
+          <tr>
+            <td style="color:#e09030;font-weight:600">Subtitles</td>
+            <td><div class="color-row"><input type="color" id="s-sub-color" value="#a86200" oninput="syncSettingsHex('sub')"><input type="text" id="s-sub-hex" value="#a86200" class="hex-input" maxlength="7" oninput="syncSettingsPicker('sub')"></div></td>
+            <td><label class="toggle"><input type="checkbox" id="s-show-subs" checked><span class="slider"></span></label></td>
+          </tr>
+          <tr>
+            <td style="color:#999;font-weight:600">Rating</td>
+            <td><div class="color-row"><input type="color" id="s-rating-color" value="#2d2d2d" oninput="syncSettingsHex('rating')"><input type="text" id="s-rating-hex" value="#2d2d2d" class="hex-input" maxlength="7" oninput="syncSettingsPicker('rating')"></div></td>
+            <td><label class="toggle"><input type="checkbox" id="s-show-rating" checked><span class="slider"></span></label></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
+        <label class="toggle"><input type="checkbox" id="s-normalize-portrait" checked><span class="slider"></span></label>
+        <span style="font-size:13px">Pad square/landscape posters to 2:3 portrait so badges aren't cropped by Jellyfin</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tag Destinations -->
+  <div class="settings-section">
+    <div class="section-header" onclick="toggleSection(this)">
+      🏷 Tag destinations <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <p class="hint" style="margin-bottom:10px">Control which categories of tags are applied to each platform. "Poster" controls badge visibility on overlaid images.</p>
+      <table class="dest-grid">
+        <thead><tr><th></th><th>Poster</th><th>Jellyfin</th><th>Sonarr</th><th>Radarr</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Video info</td>
+            <td><input type="checkbox" id="dest-video-poster"     checked></td>
+            <td><input type="checkbox" id="dest-video-jellyfin"   checked></td>
+            <td><input type="checkbox" id="dest-video-sonarr"     checked></td>
+            <td><input type="checkbox" id="dest-video-radarr"     checked></td>
+          </tr>
+          <tr>
+            <td>Audio info</td>
+            <td><input type="checkbox" id="dest-audio-poster"     checked></td>
+            <td><input type="checkbox" id="dest-audio-jellyfin"   checked></td>
+            <td><input type="checkbox" id="dest-audio-sonarr"     checked></td>
+            <td><input type="checkbox" id="dest-audio-radarr"           ></td>
+          </tr>
+          <tr>
+            <td>Subtitles</td>
+            <td><input type="checkbox" id="dest-subtitles-poster"   checked></td>
+            <td><input type="checkbox" id="dest-subtitles-jellyfin" checked></td>
+            <td><input type="checkbox" id="dest-subtitles-sonarr"        ></td>
+            <td><input type="checkbox" id="dest-subtitles-radarr"        ></td>
+          </tr>
+          <tr>
+            <td>Rating</td>
+            <td><input type="checkbox" id="dest-rating-poster"     checked></td>
+            <td><input type="checkbox" id="dest-rating-jellyfin"        ></td>
+            <td><input type="checkbox" id="dest-rating-sonarr"          ></td>
+            <td><input type="checkbox" id="dest-rating-radarr"          ></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="save-bar">
+    <button class="btn primary" onclick="saveSettings()">💾 Save settings</button>
+    <span class="save-status" id="save-status"></span>
+    <button class="yaml-toggle" onclick="toggleYaml()">Advanced: YAML editor ▾</button>
+  </div>
+
+  <div class="yaml-wrap" id="yaml-wrap">
+    <div style="margin-bottom:6px;display:flex;gap:8px">
+      <button class="btn sm" onclick="saveYaml()">Save YAML</button>
+      <button class="btn sm" onclick="loadYamlFromDisk()">Reload from disk</button>
+    </div>
+    <textarea id="yaml-editor" spellcheck="false"></textarea>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════ STATE ═══════════════════════
+let settings = {};
+let selectedLibraryIds = [];
+let pathFilters = [];
+let sonarrInstances = [];
+let radarrInstances = [];
+let sseSource = null;
+let mediaPage = 1;
+let sampleItems = [];       // [{id, name}, ...] from Jellyfin, for preview posters
+let sampleItemsLoaded = false;
+let previewDebounce = null;
+
+const PREVIEW_PROFILES = [
+  {resolution:"4K",   video_codec:"H.265", hdr_type:"HDR10",  audio:"EN DTS-HD",                    subtitles:"EN PGS",               rating:"PG-13", label:"4K HDR · EN DTS-HD"},
+  {resolution:"1080p",video_codec:"H.265", hdr_type:"",       audio:"EN DTS-HD,JA AAC",             subtitles:"EN PGS,JA PGS",        rating:"TV-14", label:"1080p · dual-audio"},
+  {resolution:"4K",   video_codec:"AV1",   hdr_type:"DV",     audio:"EN TrueHD Atmos,JA DTS-HD,FR AAC", subtitles:"EN SRT,FR SRT,DE SRT,ES SRT", rating:"R", label:"4K DV · multi-audio"},
+  {resolution:"720p", video_codec:"H.264", hdr_type:"",       audio:"EN AAC",                       subtitles:"",                     rating:"",      label:"720p · minimal"},
+];
+
+// ═══════════════════════ WCAG CONTRAST ═══════════════════════
+function wcagContrast(hex1, hex2) {
+  const lum = hex => {
+    const h = hex.replace('#','');
+    const r = parseInt(h.slice(0,2),16)/255, g = parseInt(h.slice(2,4),16)/255, b = parseInt(h.slice(4,6),16)/255;
+    const lin = c => c <= 0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4);
+    return 0.2126*lin(r) + 0.7152*lin(g) + 0.0722*lin(b);
+  };
+  const l1 = lum(hex1 || '#000000'), l2 = lum(hex2 || '#ffffff');
+  const [hi, lo] = l1 > l2 ? [l1, l2] : [l2, l1];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+function updateContrastIndicator() {
+  const text = document.getElementById('prev-text-color').value || '#ffffff';
+  const sizeMap = {small: 84, medium: 92, large: 104};
+  const fontSize = sizeMap[document.querySelector('#prev-badge-size .size-btn.active')?.dataset.size] ?? 92;
+  // Check worst contrast across visible category colors
+  const cats = [
+    {colorId:'prev-video-color',  showId:'prev-show-video'},
+    {colorId:'prev-audio-color',  showId:'prev-show-audio'},
+    {colorId:'prev-sub-color',    showId:'prev-show-subs'},
+    {colorId:'prev-rating-color', showId:'prev-show-rating'},
+  ];
+  let minRatio = Infinity;
+  for (const {colorId, showId} of cats) {
+    if (!document.getElementById(showId)?.checked) continue;
+    const fill = document.getElementById(colorId)?.value || '#000000';
+    const r = wcagContrast(fill, text);
+    if (r < minRatio) minRatio = r;
+  }
+  if (!isFinite(minRatio)) minRatio = wcagContrast('#000000', text);
+  const required = fontSize >= 24 ? 4.5 : 7.0;
+  const pass = minRatio >= required;
+  document.getElementById('contrast-ratio').textContent = minRatio.toFixed(1) + ':1';
+  const statusEl = document.getElementById('contrast-status');
+  statusEl.textContent = pass ? '✓ WCAG AAA' : '✗ Fails WCAG AAA';
+  statusEl.className = 'contrast-status ' + (pass ? 'pass' : 'fail');
+  document.getElementById('contrast-req').textContent = `Min across categories · req ${required}:1`;
+  const saveBtn = document.getElementById('btn-save-preview');
+  if (saveBtn) saveBtn.disabled = !pass;
+}
+
+function syncHex(which) {
+  const picker = document.getElementById(`prev-${which}-color`);
+  const hex = document.getElementById(`prev-${which}-hex`);
+  hex.value = picker.value;
+}
+
+function syncPicker(which) {
+  const hex = document.getElementById(`prev-${which}-hex`).value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+    document.getElementById(`prev-${which}-color`).value = hex;
+    updateContrastIndicator();
+  }
+}
+
+function syncCatHex(cat) {
+  const picker = document.getElementById(`prev-${cat}-color`);
+  const hex = document.getElementById(`prev-${cat}-hex`);
+  if (picker && hex) hex.value = picker.value;
+}
+function syncCatPicker(cat) {
+  const val = (document.getElementById(`prev-${cat}-hex`)?.value || '').trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    const picker = document.getElementById(`prev-${cat}-color`);
+    if (picker) { picker.value = val; updateContrastIndicator(); }
+  }
+}
+function syncSettingsHex(cat) {
+  const picker = document.getElementById(`s-${cat}-color`);
+  const hex = document.getElementById(`s-${cat}-hex`);
+  if (picker && hex) hex.value = picker.value;
+}
+function syncSettingsPicker(cat) {
+  const val = (document.getElementById(`s-${cat}-hex`)?.value || '').trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    const picker = document.getElementById(`s-${cat}-color`);
+    if (picker) picker.value = val;
+  }
+}
+function onSettingsChange() {}
+
+function onColorChange() {
+  syncHex('text');
+  updateContrastIndicator();
+  schedulePreviewRefresh();
+}
+
+function onPreviewChange() {
+  schedulePreviewRefresh();
+}
+
+function schedulePreviewRefresh() {
+  clearTimeout(previewDebounce);
+  previewDebounce = setTimeout(refreshPreviews, 300);
+}
+
+// ═══════════════════════ NAV ═══════════════════════
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(el => el.classList.toggle('active', el.id === 'page-' + name));
+  document.querySelectorAll('.nav-btn').forEach((el, i) => el.classList.toggle('active', ['dashboard','preview','settings'][i] === name));
+  if (name === 'preview') {
+    ensureSettingsLoaded().then(() => {
+      if (!sampleItemsLoaded) loadSampleItems();
+      else refreshPreviews();
+    });
+  }
+  if (name === 'settings') loadSettings();
+}
+
+async function ensureSettingsLoaded() {
+  if (!settings || !settings.image) {
+    try { settings = await apiFetch('/api/settings'); populateForm(settings); } catch {}
+  }
+}
+
+// ═══════════════════════ DASHBOARD ═══════════════════════
+const fmt = iso => iso ? new Date(iso).toLocaleString() : '—';
+
+async function loadStats() {
+  try {
+    const d = await apiFetch('/stats');
+    document.getElementById('stat-tagged').textContent = d.total_tagged ?? '—';
+    document.getElementById('stat-images').textContent = d.images_modified ?? '—';
+    document.getElementById('stat-last').textContent = d.last_scan_at ? fmt(d.last_scan_at) : '—';
+    document.getElementById('stat-next').textContent = d.next_scan_at ? fmt(d.next_scan_at) : 'manual';
+  } catch {}
+}
+
+function healthCard(name, h) {
+  const dotCls = h.ok ? 'ok' : (h.status === 'auth_error' ? 'warn' : 'fail');
+  return `<div class="health-card">
+    <div class="health-card-header">
+      <span class="health-dot ${dotCls}"></span>
+      <span class="health-name" title="${name}">${name}</span>
+    </div>
+    <div class="health-msg">${h.message || (h.ok ? 'Healthy' : 'Unavailable')}</div>
+  </div>`;
+}
+
+async function loadHealth() {
+  try {
+    const d = await apiFetch('/health');
+    const el = document.getElementById('health-list');
+    const cards = [
+      healthCard('Jellyfin', d.jellyfin),
+      ...(d.sonarr||[]).map(s => healthCard(`Sonarr — ${s.name}`, s)),
+      ...(d.radarr||[]).map(s => healthCard(`Radarr — ${s.name}`, s)),
+    ];
+    el.innerHTML = cards.length ? cards.join('') : '<span style="color:var(--muted);font-size:13px">No services configured</span>';
+  } catch {}
+}
+
+async function loadMedia() {
+  const res = document.getElementById('filter-res').value.trim();
+  const lang = document.getElementById('filter-lang').value.trim();
+  const params = new URLSearchParams({page: mediaPage, per_page: 50});
+  if (res) params.set('resolution', res);
+  if (lang) params.set('language', lang);
+  try {
+    const d = await apiFetch('/media?' + params);
+    const tbody = document.getElementById('media-tbody');
+    if (!d.items.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:24px">No items yet — run a scan to populate.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.items.map(item => {
+      const name = item.file_path ? item.file_path.split('/').slice(-2,-1)[0] || item.file_path.split('/').pop() : item.item_id;
+      const resCls = {4: 'res-4K', 10: 'res-1080p', 7: 'res-720p'}[item.resolution?.charAt(0)] ?? '';
+      const videoParts = [item.resolution, item.video_codec, item.hdr_type].filter(Boolean);
+      const videoCell = videoParts.length
+        ? `<span class="badge ${resCls}">${videoParts[0]}</span>` + videoParts.slice(1).map(v => `<span class="badge">${v}</span>`).join('')
+        : '<span style="color:var(--muted)">—</span>';
+      const audioTracks = item.audio_tracks || [];
+      const audioCell = audioTracks.length
+        ? audioTracks.map(t => `<span class="badge">${t.lang && t.lang !== 'UND' ? t.lang + ' ' : ''}${t.codec}</span>`).join('')
+        : (item.languages||[]).map(l => `<span class="badge">${l}</span>`).join('') || '<span style="color:var(--muted)">—</span>';
+      const ratingCell = item.content_rating
+        ? `<span class="badge" style="background:#3a3a3a;color:#ccc">${item.content_rating}</span>`
+        : '<span style="color:var(--muted)">—</span>';
+      const tagB = (item.tags_applied||[]).map(t => {
+        const cls = t.includes('dual') ? 'tag-dual' : (t.includes('multi')) ? 'tag-multi' : '';
+        return `<span class="badge ${cls}">${t}</span>`;
+      }).join('');
+      return `<tr>
+        <td title="${item.file_path||''}">${name}</td>
+        <td>${item.source}</td>
+        <td>${videoCell}</td>
+        <td>${audioCell}</td>
+        <td>${ratingCell}</td>
+        <td>${tagB}</td>
+        <td style="color:var(--muted);font-size:11px">${item.last_scanned ? fmt(item.last_scanned) : '—'}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('media-page-info').textContent =
+      `Showing ${(mediaPage-1)*50+1}–${Math.min(mediaPage*50,d.total)} of ${d.total}`;
+  } catch {}
+}
+
+async function triggerScan(type) {
+  document.getElementById('btn-inc').disabled = true;
+  document.getElementById('btn-full').disabled = true;
+  document.getElementById('btn-cancel').style.display = '';
+  try {
+    await apiFetch('/scan/' + type, {method:'POST'});
+    startSSE();
+    pollProgress();
+  } catch(e) {
+    document.getElementById('btn-cancel').style.display = 'none';
+    alert('Error: '+e);
+  }
+}
+
+async function cancelScan() {
+  try {
+    await apiFetch('/scan/cancel', {method:'POST'});
+    document.getElementById('btn-cancel').disabled = true;
+    document.getElementById('btn-cancel').textContent = 'Cancelling…';
+  } catch(e) { alert('Error: '+e); }
+}
+
+function startSSE() {
+  if (sseSource) sseSource.close();
+  const logBox = document.getElementById('log-box');
+  logBox.innerHTML = '';
+  sseSource = new EventSource('/scan/stream');
+  sseSource.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    const div = document.createElement('div');
+    div.className = 'line' + (msg.includes('error')||msg.includes('fail') ? ' err' : msg.includes('complete') ? ' ok' : '');
+    div.textContent = msg;
+    logBox.appendChild(div);
+    logBox.scrollTop = logBox.scrollHeight;
+  };
+}
+
+async function pollProgress() {
+  const wrap = document.getElementById('progress-wrap');
+  const bar = document.getElementById('progress-bar');
+  const lbl = document.getElementById('progress-label');
+  wrap.style.display = '';
+  while (true) {
+    try {
+      const d = await apiFetch('/scan/status');
+      const pct = d.total > 0 ? Math.round(d.done/d.total*100) : 0;
+      bar.style.width = pct + '%';
+      lbl.textContent = d.running ? `${d.done} / ${d.total}${d.current_item ? ' — '+d.current_item : ''}` : `Done (${d.done} items)`;
+      if (!d.running) {
+        document.getElementById('btn-inc').disabled = false;
+        document.getElementById('btn-full').disabled = false;
+        const cancelBtn = document.getElementById('btn-cancel');
+        cancelBtn.style.display = 'none';
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = '✕ Cancel';
+        lbl.textContent = d.cancelled ? 'Cancelled' : `Done (${d.done} items)`;
+        if (sseSource) { sseSource.close(); sseSource = null; }
+        loadStats(); loadMedia();
+        break;
+      }
+    } catch {}
+    await sleep(1500);
+  }
+}
+
+// ═══════════════════════ PREVIEW ═══════════════════════
+async function loadSampleItems() {
+  await loadSyntheticPosters();
+  sampleItemsLoaded = true;
+}
+
+async function loadSyntheticPosters() {
+  try {
+    sampleItems = await apiFetch('/api/preview/sample-posters?source=synthetic');
+  } catch {
+    sampleItems = [];
+  }
+  refreshPreviews();
+}
+
+async function fetchJellyfinPosters() {
+  const statusEl = document.getElementById('jf-poster-status');
+  statusEl.textContent = 'Fetching…';
+  try {
+    sampleItems = await apiFetch('/api/preview/sample-posters?source=jellyfin');
+    const fromJf = sampleItems.filter(i => i.source === 'jellyfin').length;
+    statusEl.textContent = fromJf ? `${fromJf} Jellyfin poster${fromJf>1?'s':''} loaded` : 'No Jellyfin posters found — using synthetic';
+    document.getElementById('btn-refresh-jf').style.display = '';
+  } catch (e) {
+    statusEl.textContent = '✗ ' + e.message;
+  }
+  refreshPreviews();
+}
+
+function onPosterSourceChange() {
+  const useJf = document.getElementById('src-jellyfin').checked;
+  document.getElementById('jf-poster-actions').style.display = useJf ? 'flex' : 'none';
+  if (!useJf) {
+    document.getElementById('jf-poster-status').textContent = '';
+    document.getElementById('btn-refresh-jf').style.display = 'none';
+    loadSyntheticPosters();
+  }
+}
+
+function previewTags(resolution, languages) {
+  const prefix = document.getElementById('prev-prefix').value || 'mf-';
+  const dual = document.getElementById('prev-dual').value || 'dual-audio';
+  const multi = document.getElementById('prev-multi').value || 're-encode';
+  const tags = [];
+  if (resolution) tags.push(prefix + resolution);
+  languages.forEach(l => tags.push(prefix + l));
+  if (languages.length === 2) tags.push(prefix + dual);
+  else if (languages.length >= 3) tags.push(prefix + multi);
+  return tags;
+}
+
+function setBadgeSize(size) {
+  document.querySelectorAll('#prev-badge-size .size-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.size === size);
+  });
+  onPreviewChange();
+}
+
+function refreshPreviews() {
+  const position = document.getElementById('prev-position').value;
+  const opacity = (document.getElementById('prev-opacity').value / 100).toFixed(2);
+  const badgeSize = document.querySelector('#prev-badge-size .size-btn.active')?.dataset.size ?? 'medium';
+  const enc = v => encodeURIComponent(v || '');
+  const textColor  = enc(document.getElementById('prev-text-color')?.value  || '#ffffff');
+  const videoColor = enc(document.getElementById('prev-video-color')?.value  || '#1a7a6e');
+  const audioColor = enc(document.getElementById('prev-audio-color')?.value  || '#6b3a9e');
+  const subColor   = enc(document.getElementById('prev-sub-color')?.value    || '#a86200');
+  const ratingColor= enc(document.getElementById('prev-rating-color')?.value || '#2d2d2d');
+  const showVideo  = document.getElementById('prev-show-video')?.checked  !== false ? 'true' : 'false';
+  const showAudio  = document.getElementById('prev-show-audio')?.checked  !== false ? 'true' : 'false';
+  const showSubs   = document.getElementById('prev-show-subs')?.checked   !== false ? 'true' : 'false';
+  const showRating = document.getElementById('prev-show-rating')?.checked !== false ? 'true' : 'false';
+  const ts = Date.now();
+
+  const grid = document.getElementById('preview-grid');
+  grid.innerHTML = PREVIEW_PROFILES.map((p, i) => {
+    const item = sampleItems.length ? sampleItems[i % sampleItems.length] : null;
+    let bgParam = '';
+    if (item) {
+      bgParam = item.source === 'jellyfin'
+        ? `&item_id=${enc(item.item_id)}`
+        : `&sample=${enc(item.sample)}`;
+    }
+    const url = `/preview/image?resolution=${enc(p.resolution)}&video_codec=${enc(p.video_codec)}&hdr_type=${enc(p.hdr_type)}`
+      + `&audio=${enc(p.audio)}&subtitles=${enc(p.subtitles)}&rating=${enc(p.rating)}`
+      + `&position=${enc(position)}&opacity=${opacity}&badge_size=${badgeSize}`
+      + `&text_color=${textColor}&video_color=${videoColor}&audio_color=${audioColor}`
+      + `&sub_color=${subColor}&rating_color=${ratingColor}`
+      + `&show_video=${showVideo}&show_audio=${showAudio}&show_subs=${showSubs}&show_rating=${showRating}`
+      + `${bgParam}&t=${ts}`;
+    const posterName = item ? `<span style="color:var(--muted);font-weight:400"> — ${esc(item.name)}</span>` : '';
+    return `<div class="preview-card">
+      <img src="${url}" loading="lazy" alt="${p.label}">
+      <div class="pc-body">
+        <div class="pc-label">${p.label}${posterName}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function collectPreviewSettings() {
+  return {
+    ...settings,
+    tags: {
+      ...(settings.tags || {}),
+      managed_prefix: getVal('prev-prefix') || 'mf-',
+      dual_audio_tag: getVal('prev-dual') || 'dual-audio',
+      multi_audio_tag: getVal('prev-multi') || 'multi-audio',
+    },
+    image: {
+      ...(settings.image || {}),
+      badge_position: document.getElementById('prev-position').value,
+      badge_opacity: parseInt(document.getElementById('prev-opacity').value) / 100,
+      badge_size: document.querySelector('#prev-badge-size .size-btn.active')?.dataset.size ?? 'medium',
+      badge_text_color:  document.getElementById('prev-text-color')?.value  || '#ffffff',
+      video_badge_color: document.getElementById('prev-video-color')?.value  || '#1a7a6e',
+      audio_badge_color: document.getElementById('prev-audio-color')?.value  || '#6b3a9e',
+      sub_badge_color:   document.getElementById('prev-sub-color')?.value    || '#a86200',
+      rating_badge_color:document.getElementById('prev-rating-color')?.value || '#2d2d2d',
+      show_video_badges: document.getElementById('prev-show-video')?.checked  ?? true,
+      show_audio_badges: document.getElementById('prev-show-audio')?.checked  ?? true,
+      show_sub_badges:   document.getElementById('prev-show-subs')?.checked   ?? true,
+      show_rating_badge: document.getElementById('prev-show-rating')?.checked ?? true,
+    },
+  };
+}
+
+async function savePreviewSettings() {
+  const body = collectPreviewSettings();
+  const statusEl = document.getElementById('preview-save-status');
+  statusEl.textContent = 'Saving…';
+  statusEl.className = 'save-status';
+  try {
+    await apiFetch('/api/settings', {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    settings = {...settings, ...body};
+    statusEl.className = 'save-status ok';
+    statusEl.textContent = '✓ Saved at ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    statusEl.className = 'save-status err';
+    statusEl.textContent = '✗ ' + e;
+  }
+}
+
+// ═══════════════════════ SETTINGS ═══════════════════════
+async function loadSettings() {
+  try {
+    settings = await apiFetch('/api/settings');
+    populateForm(settings);
+  } catch {}
+}
+
+function populateForm(s) {
+  // Auth
+  setVal('s-auth-username', s.auth?.username ?? 'admin');
+
+  // Jellyfin
+  setVal('s-jf-url', s.jellyfin?.url ?? '');
+  setVal('s-jf-apikey', s.jellyfin?.api_key ?? '');
+  selectedLibraryIds = s.jellyfin?.library_ids ?? [];
+
+  // Sonarr
+  sonarrInstances = (s.sonarr?.instances ?? []).map(i => ({...i}));
+  renderInstances('sonarr');
+
+  // Radarr
+  radarrInstances = (s.radarr?.instances ?? []).map(i => ({...i}));
+  renderInstances('radarr');
+
+  // Scan
+  parseCronToUI(s.scan?.schedule ?? '0 3 * * *');
+  document.getElementById('s-scan-incremental').checked = s.scan?.incremental ?? true;
+  pathFilters = [...(s.scan?.path_filters ?? [])];
+  renderPathTags();
+
+  // Populate preview controls from saved settings
+  setSelectVal('prev-position', s.image?.badge_position ?? 'bottom-left');
+  const opacityPct = Math.round((s.image?.badge_opacity ?? 0.65) * 100);
+  document.getElementById('prev-opacity').value = opacityPct;
+  document.getElementById('prev-opacity-val').textContent = opacityPct + '%';
+  setBadgeSize(s.image?.badge_size ?? 'medium');
+
+  const setColor = (id, val) => {
+    const picker = document.getElementById(id + '-color');
+    const hex    = document.getElementById(id + '-hex');
+    if (picker) picker.value = val;
+    if (hex)    hex.value    = val;
+  };
+  setColor('prev-text',   s.image?.badge_text_color   ?? '#ffffff');
+  setColor('prev-video',  s.image?.video_badge_color  ?? '#1a7a6e');
+  setColor('prev-audio',  s.image?.audio_badge_color  ?? '#6b3a9e');
+  setColor('prev-sub',    s.image?.sub_badge_color    ?? '#a86200');
+  setColor('prev-rating', s.image?.rating_badge_color ?? '#2d2d2d');
+
+  const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+  setChk('prev-show-video',  s.image?.show_video_badges  ?? true);
+  setChk('prev-show-audio',  s.image?.show_audio_badges  ?? true);
+  setChk('prev-show-subs',   s.image?.show_sub_badges    ?? true);
+  setChk('prev-show-rating', s.image?.show_rating_badge  ?? true);
+
+  setVal('prev-prefix', s.tags?.managed_prefix ?? 'mf-');
+  setVal('prev-dual',   s.tags?.dual_audio_tag  ?? 'dual-audio');
+  setVal('prev-multi',  s.tags?.multi_audio_tag ?? 'multi-audio');
+
+  // Settings page — badge appearance
+  const sColor = (id, val) => {
+    const picker = document.getElementById('s-' + id + '-color');
+    const hex    = document.getElementById('s-' + id + '-hex');
+    if (picker) picker.value = val;
+    if (hex)    hex.value    = val;
+  };
+  sColor('badge-text', s.image?.badge_text_color   ?? '#ffffff');
+  sColor('video',      s.image?.video_badge_color  ?? '#1a7a6e');
+  sColor('audio',      s.image?.audio_badge_color  ?? '#6b3a9e');
+  sColor('sub',        s.image?.sub_badge_color    ?? '#a86200');
+  sColor('rating',     s.image?.rating_badge_color ?? '#2d2d2d');
+  setChk('s-show-video',  s.image?.show_video_badges  ?? true);
+  setChk('s-show-audio',  s.image?.show_audio_badges  ?? true);
+  setChk('s-show-subs',   s.image?.show_sub_badges    ?? true);
+  setChk('s-show-rating', s.image?.show_rating_badge  ?? true);
+  setChk('s-normalize-portrait', s.image?.normalize_portrait ?? true);
+
+  // Settings page — tag destinations
+  const CATS = ['video','audio','subtitles','rating'];
+  const DESTS = ['poster','jellyfin','sonarr','radarr'];
+  for (const cat of CATS) {
+    const enabled = s.tags?.destinations?.[cat] ?? [];
+    for (const dest of DESTS) {
+      const el = document.getElementById(`dest-${cat}-${dest}`);
+      if (el) el.checked = enabled.includes(dest);
+    }
+  }
+
+  updateContrastIndicator();
+}
+
+function collectForm() {
+  // Collect destination grid
+  const CATS = ['video','audio','subtitles','rating'];
+  const DESTS = ['poster','jellyfin','sonarr','radarr'];
+  const destinations = {};
+  for (const cat of CATS) {
+    destinations[cat] = DESTS.filter(d => document.getElementById(`dest-${cat}-${d}`)?.checked);
+  }
+
+  const gS = id => document.getElementById(id)?.value || '';
+
+  return {
+    ...settings,
+    jellyfin: {
+      url: getVal('s-jf-url'),
+      api_key: getVal('s-jf-apikey'),
+      library_ids: selectedLibraryIds,
+    },
+    sonarr: { instances: sonarrInstances.map(cleanInstance) },
+    radarr: { instances: radarrInstances.map(cleanInstance) },
+    scan: {
+      schedule: buildCronFromUI(),
+      incremental: document.getElementById('s-scan-incremental').checked,
+      path_filters: [...pathFilters],
+    },
+    tags: {
+      ...(settings.tags || {}),
+      destinations,
+    },
+    image: {
+      ...(settings.image || {}),
+      badge_text_color:   gS('s-badge-text-color') || '#ffffff',
+      video_badge_color:  gS('s-video-color')  || '#1a7a6e',
+      audio_badge_color:  gS('s-audio-color')  || '#6b3a9e',
+      sub_badge_color:    gS('s-sub-color')    || '#a86200',
+      rating_badge_color: gS('s-rating-color') || '#2d2d2d',
+      show_video_badges:   document.getElementById('s-show-video')?.checked           ?? true,
+      show_audio_badges:   document.getElementById('s-show-audio')?.checked           ?? true,
+      show_sub_badges:     document.getElementById('s-show-subs')?.checked            ?? true,
+      show_rating_badge:   document.getElementById('s-show-rating')?.checked          ?? true,
+      normalize_portrait:  document.getElementById('s-normalize-portrait')?.checked   ?? true,
+    },
+    auth: { username: getVal('s-auth-username') },
+    log_level: settings.log_level ?? 'INFO',
+  };
+}
+
+function cleanInstance(i) {
+  return {name: i.name || '', url: i.url || '', api_key: i.api_key || ''};
+}
+
+async function saveSettings() {
+  const body = collectForm();
+  const statusEl = document.getElementById('save-status');
+  try {
+    await apiFetch('/api/settings', {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    statusEl.className = 'save-status ok';
+    statusEl.textContent = '✓ Saved at ' + new Date().toLocaleTimeString();
+    settings = {...settings, ...body};
+  } catch(e) {
+    statusEl.className = 'save-status err';
+    statusEl.textContent = '✗ ' + e;
+  }
+}
+
+// ── Instance cards ──
+function renderInstances(type) {
+  const list = type === 'sonarr' ? sonarrInstances : radarrInstances;
+  const el = document.getElementById(type + '-instances');
+  el.innerHTML = list.map((inst, idx) => `
+    <div class="instance-card">
+      <div class="inst-name">${inst.name || '(unnamed)'}</div>
+      <button class="btn sm danger remove-inst" onclick="removeInstance('${type}', ${idx})">Remove</button>
+      <div class="field-row">
+        <div class="field">
+          <label>Instance name</label>
+          <input type="text" value="${esc(inst.name)}" oninput="updateInstance('${type}',${idx},'name',this.value)" placeholder="general">
+        </div>
+        <div class="field">
+          <label>URL</label>
+          <input type="url" value="${esc(inst.url)}" oninput="updateInstance('${type}',${idx},'url',this.value)" placeholder="http://${type}:${type==='sonarr'?8989:7878}">
+        </div>
+      </div>
+      <div class="field">
+        <label>API Key</label>
+        <div class="inline-row">
+          <input type="password" value="${esc(inst.api_key)}" oninput="updateInstance('${type}',${idx},'api_key',this.value)">
+          <button class="btn sm" onclick="testInstance('${type}', ${idx})">Test</button>
+        </div>
+        <div id="inst-status-${type}-${idx}" style="font-size:11px;color:var(--muted);margin-top:3px"></div>
+      </div>
+    </div>`).join('');
+}
+
+function addInstance(type) {
+  const arr = type === 'sonarr' ? sonarrInstances : radarrInstances;
+  arr.push({name: '', url: '', api_key: ''});
+  renderInstances(type);
+}
+
+function removeInstance(type, idx) {
+  const arr = type === 'sonarr' ? sonarrInstances : radarrInstances;
+  arr.splice(idx, 1);
+  renderInstances(type);
+}
+
+function updateInstance(type, idx, key, value) {
+  const arr = type === 'sonarr' ? sonarrInstances : radarrInstances;
+  arr[idx][key] = value;
+  const cards = document.getElementById(type + '-instances').querySelectorAll('.inst-name');
+  if (cards[idx]) cards[idx].textContent = arr[idx].name || '(unnamed)';
+}
+
+async function testInstance(type, idx) {
+  const statusEl = document.getElementById(`inst-status-${type}-${idx}`);
+  statusEl.textContent = '(Save first, then health endpoint will reflect current API keys)';
+  statusEl.style.color = 'var(--muted)';
+}
+
+// ── Libraries ──
+async function fetchLibraries() {
+  const statusEl = document.getElementById('jf-status');
+  statusEl.textContent = 'Fetching…';
+  statusEl.style.color = 'var(--muted)';
+  try {
+    const body = collectForm();
+    await apiFetch('/api/settings', {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    const libs = await apiFetch('/api/jellyfin/libraries');
+    const listEl = document.getElementById('lib-list');
+    if (!libs.length) {
+      listEl.innerHTML = '<span style="color:var(--muted);font-size:12px">No libraries found.</span>';
+      statusEl.textContent = '✓ Connected, no libraries found';
+      statusEl.style.color = 'var(--green)';
+      return;
+    }
+    listEl.innerHTML = libs.map(l => `
+      <label class="lib-item">
+        <input type="checkbox" value="${l.id}" ${selectedLibraryIds.includes(l.id) ? 'checked' : ''} onchange="toggleLibrary('${l.id}', this.checked)">
+        <span>${l.name}</span>
+        <span style="font-size:11px;color:var(--muted)">(${l.type || 'mixed'})</span>
+      </label>`).join('');
+    statusEl.textContent = `✓ ${libs.length} libraries`;
+    statusEl.style.color = 'var(--green)';
+  } catch(e) {
+    statusEl.textContent = '✗ ' + e;
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
+function toggleLibrary(id, checked) {
+  if (checked) { if (!selectedLibraryIds.includes(id)) selectedLibraryIds.push(id); }
+  else selectedLibraryIds = selectedLibraryIds.filter(x => x !== id);
+}
+
+// ── Path filters ──
+function addPathFilter() {
+  const val = document.getElementById('s-path-filter-input').value.trim();
+  if (!val || pathFilters.includes(val)) return;
+  pathFilters.push(val);
+  document.getElementById('s-path-filter-input').value = '';
+  renderPathTags();
+}
+
+function removePathFilter(path) {
+  pathFilters = pathFilters.filter(p => p !== path);
+  renderPathTags();
+}
+
+function renderPathTags() {
+  const el = document.getElementById('path-tags');
+  el.innerHTML = pathFilters.map(p =>
+    `<div class="path-tag"><span>${p}</span><button onclick="removePathFilter('${p.replace(/'/g,"\\'")}')">×</button></div>`
+  ).join('');
+}
+
+async function fetchRootFolders() {
+  const el = document.getElementById('rootfolder-list');
+  el.innerHTML = 'Fetching…';
+  const paths = new Set();
+  const body = collectForm();
+  try {
+    await apiFetch('/api/settings', {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    for (const inst of sonarrInstances) {
+      if (!inst.name) continue;
+      try {
+        const folders = await apiFetch(`/api/sonarr/${encodeURIComponent(inst.name)}/rootfolders`);
+        folders.forEach(f => paths.add(f.path));
+      } catch {}
+    }
+    for (const inst of radarrInstances) {
+      if (!inst.name) continue;
+      try {
+        const folders = await apiFetch(`/api/radarr/${encodeURIComponent(inst.name)}/rootfolders`);
+        folders.forEach(f => paths.add(f.path));
+      } catch {}
+    }
+  } catch {}
+  if (!paths.size) { el.innerHTML = '<span style="color:var(--muted);font-size:12px">No root folders found. Save settings and try again.</span>'; return; }
+  el.innerHTML = [...paths].map(p =>
+    `<button class="btn sm" onclick="addRootPath('${p.replace(/'/g,"\\'")}')" title="Click to add as path filter">${p}</button>`
+  ).join('');
+}
+
+function addRootPath(path) {
+  if (!pathFilters.includes(path)) {
+    pathFilters.push(path);
+    renderPathTags();
+  }
+}
+
+// ── Password ──
+async function changePassword() {
+  const current = document.getElementById('s-auth-current').value;
+  const newPw = document.getElementById('s-auth-new').value;
+  const confirm = document.getElementById('s-auth-confirm').value;
+  const statusEl = document.getElementById('pw-status');
+  if (!current || !newPw) { statusEl.style.color='var(--red)'; statusEl.textContent='Fill in current and new password.'; return; }
+  if (newPw !== confirm) { statusEl.style.color='var(--red)'; statusEl.textContent='Passwords do not match.'; return; }
+  try {
+    await apiFetch('/api/auth/change-password', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({current_password:current, new_password:newPw})});
+    statusEl.style.color='var(--green)'; statusEl.textContent='✓ Password changed.';
+    document.getElementById('s-auth-current').value='';
+    document.getElementById('s-auth-new').value='';
+    document.getElementById('s-auth-confirm').value='';
+  } catch(e) {
+    statusEl.style.color='var(--red)'; statusEl.textContent='✗ ' + e;
+  }
+}
+
+// ── YAML editor ──
+function toggleYaml() {
+  const wrap = document.getElementById('yaml-wrap');
+  wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+  if (wrap.style.display !== 'none') loadYamlFromDisk();
+}
+
+async function loadYamlFromDisk() {
+  try {
+    const d = await apiFetch('/config');
+    document.getElementById('yaml-editor').value = d.yaml;
+  } catch {}
+}
+
+async function saveYaml() {
+  const yaml = document.getElementById('yaml-editor').value;
+  const statusEl = document.getElementById('save-status');
+  try {
+    await apiFetch('/config', {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({yaml})});
+    statusEl.className='save-status ok'; statusEl.textContent='✓ YAML saved at '+new Date().toLocaleTimeString();
+    await loadSettings();
+  } catch(e) {
+    statusEl.className='save-status err'; statusEl.textContent='✗ '+e;
+  }
+}
+
+// ── Schedule builder ──
+function initScheduleHours() {
+  const sel = document.getElementById('s-sched-hour');
+  if (!sel || sel.options.length) return;
+  const labels = [
+    '12 AM (midnight)','1 AM','2 AM','3 AM','4 AM','5 AM','6 AM','7 AM',
+    '8 AM','9 AM','10 AM','11 AM','12 PM (noon)','1 PM','2 PM','3 PM',
+    '4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM',
+  ];
+  labels.forEach((lbl, h) => {
+    const o = document.createElement('option');
+    o.value = h; o.textContent = lbl;
+    sel.appendChild(o);
+  });
+}
+
+function onFreqChange() {
+  const freq = document.getElementById('s-sched-freq').value;
+  const showN = freq === 'every-n';
+  const showTime = freq === 'daily' || freq === 'weekly';
+  const showDay = freq === 'weekly';
+  const showCustom = freq === 'custom';
+  document.getElementById('sched-n-wrap').style.display = showN ? 'inline-flex' : 'none';
+  document.getElementById('sched-time-wrap').style.display = showTime ? 'inline-flex' : 'none';
+  document.getElementById('sched-day-wrap').style.display = showDay ? 'inline-flex' : 'none';
+  document.getElementById('s-sched-custom').style.display = showCustom ? 'inline-block' : 'none';
+  updateCronHint();
+}
+
+function buildCronFromUI() {
+  const freq = document.getElementById('s-sched-freq').value;
+  if (freq === 'manual') return '';
+  if (freq === 'every-n') {
+    const n = document.getElementById('s-sched-n').value;
+    return `0 */${n} * * *`;
+  }
+  if (freq === 'daily') {
+    const h = document.getElementById('s-sched-hour').value;
+    return `0 ${h} * * *`;
+  }
+  if (freq === 'weekly') {
+    const h = document.getElementById('s-sched-hour').value;
+    const d = document.getElementById('s-sched-day').value;
+    return `0 ${h} * * ${d}`;
+  }
+  return document.getElementById('s-sched-custom').value.trim();
+}
+
+function parseCronToUI(cron) {
+  initScheduleHours();
+  if (!cron) {
+    setSelectVal('s-sched-freq', 'manual');
+    onFreqChange();
+    return;
+  }
+  const parts = cron.trim().split(/\s+/);
+  if (parts.length === 5) {
+    const [min, hour, dom, month, dow] = parts;
+    if (min === '0' && dom === '*' && month === '*') {
+      if (/^\*\/\d+$/.test(hour)) {
+        setSelectVal('s-sched-freq', 'every-n');
+        setSelectVal('s-sched-n', hour.replace('*/', ''));
+        onFreqChange();
+        return;
+      }
+      if (/^\d+$/.test(hour) && dow === '*') {
+        setSelectVal('s-sched-freq', 'daily');
+        setSelectVal('s-sched-hour', hour);
+        onFreqChange();
+        return;
+      }
+      if (/^\d+$/.test(hour) && /^\d+$/.test(dow)) {
+        setSelectVal('s-sched-freq', 'weekly');
+        setSelectVal('s-sched-hour', hour);
+        setSelectVal('s-sched-day', dow);
+        onFreqChange();
+        return;
+      }
+    }
+  }
+  setSelectVal('s-sched-freq', 'custom');
+  document.getElementById('s-sched-custom').value = cron;
+  onFreqChange();
+}
+
+function describeCron(expr) {
+  if (!expr) return 'Manual only';
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length === 5) {
+    const [min, hour, dom, month, dow] = parts;
+    const ampm = h => +h === 0 ? '12 AM' : +h < 12 ? `${h} AM` : +h === 12 ? '12 PM' : `${+h-12} PM`;
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    if (min === '0' && dom === '*' && month === '*') {
+      const m = hour.match(/^\*\/(\d+)$/);
+      if (m) return `Every ${m[1]} hour${m[1]==='1'?'':'s'}`;
+      if (/^\d+$/.test(hour) && dow === '*') return `Daily at ${ampm(hour)}`;
+      if (/^\d+$/.test(hour) && /^\d+$/.test(dow)) return `Weekly on ${days[+dow]} at ${ampm(hour)}`;
+    }
+  }
+  return 'Custom schedule';
+}
+
+function updateCronHint() {
+  const cron = buildCronFromUI();
+  const hint = document.getElementById('cron-hint');
+  if (!hint) return;
+  hint.textContent = cron ? `${describeCron(cron)}  ·  cron: ${cron}` : 'Scans only when triggered manually';
+}
+
+// init hours on load
+initScheduleHours();
+
+// ── Section collapse ──
+function toggleSection(header) {
+  header.classList.toggle('collapsed');
+  header.nextElementSibling.style.display = header.classList.contains('collapsed') ? 'none' : '';
+}
+
+// ═══════════════════════ UTILS ═══════════════════════
+async function apiFetch(url, opts = {}) {
+  const r = await fetch(url, opts);
+  if (r.status === 401) { window.location = '/login'; throw new Error('Not authenticated'); }
+  if (!r.ok) { const e = await r.json().catch(() => ({detail: r.statusText})); throw new Error(e.detail || r.statusText); }
+  if (r.headers.get('content-type')?.includes('application/json')) return r.json();
+  return r;
+}
+
+const getVal = id => document.getElementById(id)?.value ?? '';
+const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+const setSelectVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+const esc = s => (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ═══════════════════════ INIT ═══════════════════════
+loadStats();
+loadHealth();
+loadMedia();
+// Pre-load settings so preview controls are ready before the user visits the tab
+apiFetch('/api/settings').then(s => { settings = s; populateForm(s); }).catch(() => {});
+setInterval(loadStats, 30000);
+setInterval(loadHealth, 60000);
+</script>
+</body>
+</html>

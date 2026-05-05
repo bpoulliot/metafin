@@ -1,0 +1,82 @@
+services:
+
+  jellyfin-dev:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin-dev
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Denver
+    volumes:
+      - ${HOME}/.mf-dev/configs/jellyfin:/config
+      - ${HOME}/.mf-dev/media:${HOME}/.mf-dev/media:rw
+    ports:
+      - "8097:8096"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  sonarr-dev:
+    image: lscr.io/linuxserver/sonarr:develop
+    container_name: sonarr-dev
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Denver
+    volumes:
+      - ${HOME}/.mf-dev/configs/sonarr:/config
+      - ${HOME}/.mf-dev/media:${HOME}/.mf-dev/media:rw
+    ports:
+      - "8990:8989"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8989/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  radarr-dev:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr-dev
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Denver
+    volumes:
+      - ${HOME}/.mf-dev/configs/radarr:/config
+      - ${HOME}/.mf-dev/media:${HOME}/.mf-dev/media:rw
+    ports:
+      - "7880:7878"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7878/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  metafin-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: metafin-dev
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Denver
+    volumes:
+      - ${HOME}/.mf-dev/configs/metafin:/config
+      - ${HOME}/.mf-dev/media:${HOME}/.mf-dev/media:rw
+      - ./app:/app/app  # live-reload mount for development
+    ports:
+      - "7755:7755"
+    depends_on:
+      jellyfin-dev:
+        condition: service_healthy
+      sonarr-dev:
+        condition: service_healthy
+      radarr-dev:
+        condition: service_healthy
+    restart: unless-stopped
