@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -36,17 +37,33 @@ jobs:
           esac
           echo "$NEW" > VERSION
           echo "version=$NEW" >> "$GITHUB_OUTPUT"
-          echo "old_version=$OLD" >> "$GITHUB_OUTPUT"
 
-      - name: Commit and tag
+      - name: Commit, tag, and push release branch
         run: |
+          BRANCH="chore/release-v${{ steps.bump.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
           git add VERSION
           git commit -m "chore: release v${{ steps.bump.outputs.version }}"
           git tag "v${{ steps.bump.outputs.version }}"
-          git push origin main
+          git push origin "$BRANCH"
           git push origin "v${{ steps.bump.outputs.version }}"
+
+      - name: Open VERSION bump PR (auto-merges after CI)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head "chore/release-v${{ steps.bump.outputs.version }}" \
+            --title "chore: release v${{ steps.bump.outputs.version }}" \
+            --body "Automated VERSION file bump. Merges automatically once CI passes." \
+            --label "automated"
+          gh pr merge \
+            --head "chore/release-v${{ steps.bump.outputs.version }}" \
+            --squash \
+            --auto
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
