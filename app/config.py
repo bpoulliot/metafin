@@ -69,7 +69,13 @@ class ImageConfig(BaseModel):
     backup_suffix: str = ".orig"
     badge_position: str = "bottom-left"
     badge_opacity: float = 0.65
-    badge_size: Literal["small", "medium", "large"] = "medium"
+    badge_size: Literal["desktop", "tv", "tv_plus"] = "tv"
+
+    @field_validator("badge_size", mode="before")
+    @classmethod
+    def _migrate_badge_size(cls, v: object) -> object:
+        return {"small": "desktop", "medium": "tv", "large": "tv_plus"}.get(str(v), v)
+
     badge_text_color: str = "#ffffff"
 
     # Per-category badge colors (all verified WCAG AAA ≥7:1 against white text)
