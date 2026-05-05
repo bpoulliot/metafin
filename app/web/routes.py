@@ -545,7 +545,7 @@ async def preview_image(
     rating: str = "",
     position: str = "bottom-left",
     opacity: float = 0.65,
-    badge_size: str = "medium",
+    badge_size: str = "tv",
     text_color: str = "#ffffff",
     video_color: str = "#134e4a",
     audio_color: str = "#1e3a8a",
@@ -564,7 +564,7 @@ async def preview_image(
     cfg_img = ImageConfig(
         badge_position=position,
         badge_opacity=max(0.1, min(1.0, opacity)),
-        badge_size=badge_size if badge_size in ("small", "medium", "large") else "medium",
+        badge_size=badge_size if badge_size in ("desktop", "tv", "tv_plus") else "tv",
         badge_text_color=text_color or "#ffffff",
         video_badge_color=video_color or "#134e4a",
         audio_badge_color=audio_color or "#1e3a8a",

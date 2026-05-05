@@ -44,7 +44,7 @@ _GLOW_EXPAND = 4
 _GLOW_BLUR = 6
 
 _REFERENCE_WIDTH = 1000
-_BADGE_SIZE_PX: dict[str, int] = {"small": 84, "medium": 92, "large": 104}
+_BADGE_SIZE_PX: dict[str, int] = {"desktop": 56, "tv": 72, "tv_plus": 88}
 
 
 @dataclass

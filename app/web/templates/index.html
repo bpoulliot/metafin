@@ -306,10 +306,11 @@
       <div class="prev-ctrl-group">
         <span class="prev-ctrl-label">Badge size</span>
         <div class="size-btn-group" id="prev-badge-size">
-          <button class="size-btn" data-size="small" onclick="setBadgeSize('small')">Small</button>
-          <button class="size-btn active" data-size="medium" onclick="setBadgeSize('medium')">Medium</button>
-          <button class="size-btn" data-size="large" onclick="setBadgeSize('large')">Large</button>
+          <button class="size-btn" data-size="desktop" onclick="setBadgeSize('desktop')">Desktop</button>
+          <button class="size-btn active" data-size="tv" onclick="setBadgeSize('tv')">TV</button>
+          <button class="size-btn" data-size="tv_plus" onclick="setBadgeSize('tv_plus')">4K</button>
         </div>
+        <div id="badge-size-hint" class="hint" style="margin-top:4px;font-size:11px"></div>
       </div>
 
       <div class="full" style="margin-top:4px">
@@ -669,8 +670,8 @@ function wcagContrast(hex1, hex2) {
 
 function updateContrastIndicator() {
   const text = document.getElementById('prev-text-color').value || '#ffffff';
-  const sizeMap = {small: 84, medium: 92, large: 104};
-  const fontSize = sizeMap[document.querySelector('#prev-badge-size .size-btn.active')?.dataset.size] ?? 92;
+  const sizeMap = {desktop: 56, tv: 72, tv_plus: 88};
+  const fontSize = sizeMap[document.querySelector('#prev-badge-size .size-btn.active')?.dataset.size] ?? 72;
   // Check worst contrast across visible category colors
   const cats = [
     {colorId:'prev-video-color',  showId:'prev-show-video'},
@@ -970,17 +971,25 @@ function previewTags(resolution, languages) {
   return tags;
 }
 
+const _BADGE_SIZE_HINTS = {
+  desktop: 'Subtle — best for desktop or phone browsing up close',
+  tv: 'Balanced — readable on a ~55″ TV from ~8 ft away',
+  tv_plus: 'Bold — 4K display or far seating on a large screen',
+};
+
 function setBadgeSize(size) {
   document.querySelectorAll('#prev-badge-size .size-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.size === size);
   });
+  const hint = document.getElementById('badge-size-hint');
+  if (hint) hint.textContent = _BADGE_SIZE_HINTS[size] ?? '';
   onPreviewChange();
 }
 
 function refreshPreviews() {
   const position = document.getElementById('prev-position').value;
   const opacity = (document.getElementById('prev-opacity').value / 100).toFixed(2);
-  const badgeSize = document.querySelector('#prev-badge-size .size-btn.active')?.dataset.size ?? 'medium';
+  const badgeSize = document.querySelector('#prev-badge-size .size-btn.active')?.dataset.size ?? 'tv';
   const enc = v => encodeURIComponent(v || '');
   const textColor  = enc(document.getElementById('prev-text-color')?.value  || '#ffffff');
   const videoColor = enc(document.getElementById('prev-video-color')?.value  || '#1a7a6e');
@@ -1032,7 +1041,7 @@ function collectPreviewSettings() {
       ...(settings.image || {}),
       badge_position: document.getElementById('prev-position').value,
       badge_opacity: parseInt(document.getElementById('prev-opacity').value) / 100,
-      badge_size: document.querySelector('#prev-badge-size .size-btn.active')?.dataset.size ?? 'medium',
+      badge_size: document.querySelector('#prev-badge-size .size-btn.active')?.dataset.size ?? 'tv',
       badge_text_color:  document.getElementById('prev-text-color')?.value  || '#ffffff',
       video_badge_color: document.getElementById('prev-video-color')?.value  || '#134e4a',
       audio_badge_color: document.getElementById('prev-audio-color')?.value  || '#1e3a8a',
@@ -1099,7 +1108,7 @@ function populateForm(s) {
   const opacityPct = Math.round((s.image?.badge_opacity ?? 0.65) * 100);
   document.getElementById('prev-opacity').value = opacityPct;
   document.getElementById('prev-opacity-val').textContent = opacityPct + '%';
-  setBadgeSize(s.image?.badge_size ?? 'medium');
+  setBadgeSize(s.image?.badge_size ?? 'tv');
 
   const setColor = (id, val) => {
     const picker = document.getElementById(id + '-color');
@@ -1173,7 +1182,7 @@ function collectForm() {
       ...(settings.image || {}),
       badge_position:     document.getElementById('prev-position')?.value ?? 'bottom-left',
       badge_opacity:      (parseInt(document.getElementById('prev-opacity')?.value) || 65) / 100,
-      badge_size:         document.querySelector('#prev-badge-size .size-btn.active')?.dataset.size ?? 'medium',
+      badge_size:         document.querySelector('#prev-badge-size .size-btn.active')?.dataset.size ?? 'tv',
       badge_text_color:   document.getElementById('prev-text-color')?.value  || '#ffffff',
       video_badge_color:  document.getElementById('prev-video-color')?.value  || '#134e4a',
       audio_badge_color:  document.getElementById('prev-audio-color')?.value  || '#1e3a8a',
