@@ -191,26 +191,32 @@ def _make_badge_groups(
         if video_labels:
             groups.append(BadgeGroup(video_labels, img_cfg.video_badge_color, img_cfg.badge_text_color))
 
-    # Audio group
+    # Audio group — codec-first, languages grouped under each codec
+    # e.g. [DTS-HD EN JA] [AC-3 DE] instead of [EN DTS-HD] [JA DTS-HD] [DE AC-3]
     if img_cfg.show_audio_badges and "poster" in dest.audio:
-        audio_labels: list[str] = []
+        codec_langs: dict[str, list[str]] = {}
         for t in info.audio_tracks:
+            langs = codec_langs.setdefault(t.codec, [])
             if t.lang and t.lang != "UND":
-                audio_labels.append(f"{t.lang} {t.codec}")
-            else:
-                audio_labels.append(t.codec)
+                langs.append(t.lang)
+        audio_labels = [f"{codec} {' '.join(langs)}" if langs else codec for codec, langs in codec_langs.items()]
         if audio_labels:
             groups.append(BadgeGroup(audio_labels, img_cfg.audio_badge_color, img_cfg.badge_text_color))
 
-    # Subtitle group
+    # Subtitle group — format-first, languages grouped under each format
+    # e.g. [PGS EN JA IT] [SRT EN] instead of [EN PGS] [JA PGS] [IT PGS] [EN SRT]
     if img_cfg.show_sub_badges and "poster" in dest.subtitles:
-        sub_labels: list[str] = []
-        seen_sub: set[str] = set()
+        fmt_langs: dict[str, list[str]] = {}
+        seen_lang_fmt: set[tuple[str, str]] = set()
         for t in info.subtitle_tracks:
-            label = f"{t.lang} {t.format}" if t.lang and t.lang != "UND" else t.format
-            if label not in seen_sub:
-                seen_sub.add(label)
-                sub_labels.append(label)
+            key = (t.lang, t.format)
+            if key in seen_lang_fmt:
+                continue
+            seen_lang_fmt.add(key)
+            langs = fmt_langs.setdefault(t.format, [])
+            if t.lang and t.lang != "UND":
+                langs.append(t.lang)
+        sub_labels = [f"{fmt} {' '.join(langs)}" if langs else fmt for fmt, langs in fmt_langs.items()]
         if sub_labels:
             groups.append(BadgeGroup(sub_labels, img_cfg.sub_badge_color, img_cfg.badge_text_color))
 
