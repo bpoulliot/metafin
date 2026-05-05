@@ -15,12 +15,14 @@ from .config import AppConfig
 from .overlay import BadgeGroup, apply_overlay
 from .scanner import MediaInfo, probe_file
 from .state import (
+    clear_scan_errors,
     finish_scan_run,
     get_meta,
     get_session,
     set_meta,
     start_scan_run,
     upsert_media_state,
+    upsert_scan_error,
 )
 from .tagger import build_tags
 
@@ -249,6 +251,9 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
         progress.emit("[metafin] Tag config changed — forcing full re-tag of all items")
         incremental = False
 
+    if not incremental:
+        clear_scan_errors(session)
+
     try:
         items = jf.get_items(cfg.jellyfin.library_ids or None)
     except Exception as exc:
@@ -327,6 +332,8 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
             msg = f"skip (no file): {name} | path tried: {file_path or '(empty)'}"
             progress.emit(f"  {msg}")
             log.warning(msg)
+            if file_path:  # only record when a path was returned but doesn't exist
+                upsert_scan_error(session, item_id, name, file_path, "no_file")
             progress.done += 1
             continue
 
@@ -370,6 +377,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
         info = probe_results.get(file_path)
         if info is None:
             progress.emit(f"  ffprobe failed: {name} | path: {file_path}")
+            upsert_scan_error(session, item_id, name, file_path, "probe_failed")
             progress.done += 1
             continue
 
