@@ -385,7 +385,9 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
 
         progress.emit(f"  scanning: {name}")
 
-        content_rating = item.get("OfficialRating") or _get_arr_certification(item, sonarrs, radarrs) or None
+        jf_rating = item.get("OfficialRating") or ""
+        arr_cert = _get_arr_certification(item, sonarrs, radarrs) if not jf_rating else ""
+        content_rating = jf_rating or arr_cert or None
 
         jf_tags = build_tags(
             info.resolution,
@@ -420,7 +422,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
 
         try:
             fresh = jf.get_item_by_id(item_id) or item
-            jf.set_managed_tags(item_id, fresh, prefix, jf_tags)
+            jf.set_managed_tags(item_id, fresh, prefix, jf_tags, fallback_rating=arr_cert)
         except Exception as exc:
             log.warning("Jellyfin tag error for %s: %s", name, exc)
 

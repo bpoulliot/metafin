@@ -115,8 +115,12 @@ class JellyfinClient:
         items = data.get("Items", [])
         return items[0] if items else {}
 
-    def set_managed_tags(self, item_id: str, item: dict, prefix: str, new_tags: list[str]) -> None:
-        """Replace all prefix-managed tags on the item with new_tags (Jellyfin 10.9+ PUT approach)."""
+    def set_managed_tags(self, item_id: str, item: dict, prefix: str, new_tags: list[str], fallback_rating: str = "") -> None:
+        """Replace all prefix-managed tags on the item with new_tags (Jellyfin 10.9+ PUT approach).
+
+        fallback_rating is written to OfficialRating only when the item's own field is blank.
+        Pass it from arr cert data when Jellyfin had no rating and arr provided one.
+        """
         existing = self.get_tags(item)
         user_tags = [t for t in existing if not t.startswith(prefix)]
         merged = user_tags + new_tags
@@ -127,7 +131,7 @@ class JellyfinClient:
             "OriginalTitle": item.get("OriginalTitle", "") or "",
             "ForcedSortName": item.get("ForcedSortName", "") or "",
             "ProductionYear": item.get("ProductionYear"),
-            "OfficialRating": item.get("OfficialRating") or "",
+            "OfficialRating": item.get("OfficialRating") or fallback_rating or "",
             "Tags": merged,
             "Genres": item.get("Genres") or [],
             "Studios": [{"Name": s} if isinstance(s, str) else s for s in (item.get("Studios") or [])],
