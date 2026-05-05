@@ -100,7 +100,7 @@ All settings live in `/config/config.yml` (mapped from your `CONFIG_DIR`).
 | `tags.multi_audio_tag` | string | `"re-encode"` | Tag applied when 3+ audio languages found |
 | `image.targets` | list | `[poster.jpg, ...]` | Poster filenames to look for in each item folder |
 | `image.backup_suffix` | string | `".orig"` | Suffix for original poster backups |
-| `image.badge_position` | string | `"bottom-left"` | Badge position: bottom-left/right, top-left/right |
+| `image.badge_position` | string | `"bottom-left"` | Position for the main badge group (resolution, audio, subtitle): bottom-left/right, top-left/right. The rating badge is always rendered top-left independently. |
 | `image.badge_opacity` | float | `0.65` | Badge fill opacity (0.0–1.0) |
 | `image.font_size` | int | `20` | Badge font size in pixels |
 | `auth.username` | string | `"admin"` | Login username |
@@ -167,7 +167,7 @@ Every push and pull request runs:
 
 | Check | Tool |
 |---|---|
-| Python lint | flake8 |
+| Python lint + format | ruff + black |
 | Python SAST | bandit |
 | Dependency CVE audit | pip-audit |
 | Dockerfile lint | hadolint |
@@ -224,52 +224,6 @@ The dev compose mounts the `app/` directory directly so code changes are picked 
 - **Backup/restore API** — `GET /api/backup` for state.db download; `POST /api/restore` to upload and replace
 - **HTTP connection pooling** — reuse `httpx.Client` across requests for lower Jellyfin/Sonarr/Radarr API latency
 - **`pillow-simd` acceleration** — drop-in Pillow replacement for 2-4× faster badge overlay rendering (requires build toolchain in Docker image)
-
----
-
-## First Commit — Getting the Project on GitHub
-
-### Pre-flight checks (run before `git init`)
-
-```bash
-cd /path/to/metafin
-
-# Confirm .gitignore covers secrets — these must NOT appear in git status
-git init --quiet && git add --dry-run . 2>&1 | grep -E "config\.yml|state\.db|\.env$"
-# ^ Must return empty
-
-# Scan for hardcoded secrets in source (should return nothing)
-grep -rn --include="*.py" --include="*.html" --include="*.js" \
-  -E "(api_key|password|secret)\s*=\s*['\"][a-zA-Z0-9]{8,}" app/
-```
-
-### Create repo and push
-
-```bash
-# Requires gh CLI authenticated: gh auth login
-gh repo create metafin \
-  --public \
-  --description "Jellyfin media tagger and poster badge overlay service" \
-  --source=. \
-  --remote=origin \
-  --push
-
-# After pushing, create Dependabot labels
-gh label create "dependencies" --color "0075ca" --description "Dependency updates"
-gh label create "security"     --color "e11d48" --description "Security fixes and CVE patches"
-gh label create "automated"    --color "8b5cf6" --description "Automated PR (Dependabot)"
-gh label create "python"       --color "3572A5" --description "Python dependency"
-gh label create "github-actions" --color "2088FF" --description "GitHub Actions dependency"
-```
-
-### What is never committed
-
-| File | Reason |
-|---|---|
-| `config.yml` | Contains live API keys and bcrypt hash |
-| `state.db` / WAL files | Runtime SQLite database |
-| `.env` | Local dev credential overrides |
-| `app/static/preview_cache/` | Generated image cache |
 
 ---
 
