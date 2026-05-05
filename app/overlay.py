@@ -128,7 +128,7 @@ def _backup_path(image_path: Path, suffix: str) -> Path:
 
 def _compute_layout_params(img_w: int, cfg: ImageConfig) -> dict:
     scale = img_w / _REFERENCE_WIDTH
-    base_px = _BADGE_SIZE_PX.get(cfg.badge_size, _BADGE_SIZE_PX["medium"])
+    base_px = _BADGE_SIZE_PX.get(cfg.badge_size, _BADGE_SIZE_PX["tv"])
     return {
         "font_size": max(8, round(base_px * scale)),
         "pad_h": max(3, round(8 * scale)),
@@ -381,7 +381,7 @@ def generate_preview_bytes(
     base_image_bytes: bytes | None = None,
 ) -> bytes:
     """Generate a poster JPEG with badge overlay for UI preview."""
-    font_size = _BADGE_SIZE_PX.get(cfg.badge_size, _BADGE_SIZE_PX["medium"])
+    font_size = _BADGE_SIZE_PX.get(cfg.badge_size, _BADGE_SIZE_PX["tv"])
 
     if base_image_bytes:
         try:
