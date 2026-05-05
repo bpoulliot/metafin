@@ -31,12 +31,21 @@ from ..overlay import BadgeGroup, clear_pill_cache, generate_preview_bytes
 from ..pipeline import progress, run_full_scan, run_incremental_scan
 from ..preview_samples import ensure_sample_posters
 from ..scheduler import next_run_time, reschedule
-from ..state import MediaState, clear_scan_errors, get_media_filtered, get_scan_errors, get_session, get_stats
+from ..state import (
+    MediaState,
+    clear_scan_errors,
+    get_media_filtered,
+    get_recent_scans,
+    get_scan_errors,
+    get_session,
+    get_stats,
+)
 from .schemas import (
     ConfigResponse,
     ConfigSaveRequest,
     HealthResponse,
     MediaItem,
+    ScanRunItem,
     ScanStatusResponse,
     StatsResponse,
 )
@@ -300,6 +309,16 @@ async def scan_errors_clear(request: Request):
     finally:
         session.close()
     return {"status": "cleared"}
+
+
+@router.get("/api/scan-runs", response_model=list[ScanRunItem])
+async def scan_runs_list(request: Request):
+    _require_user(request)
+    session = get_session()
+    try:
+        return get_recent_scans(session)
+    finally:
+        session.close()
 
 
 # ---------------------------------------------------------------------------

@@ -240,8 +240,11 @@
     </div>
 
     <div class="card full">
-      <h2>Activity log</h2>
-      <div class="log-box" id="log-box"></div>
+      <h2>Scan history</h2>
+      <div id="recent-scans-panel">
+        <div id="recent-scans-body" style="color:var(--muted);font-size:13px">Loading…</div>
+      </div>
+      <div class="log-box" id="log-box" style="display:none"></div>
     </div>
 
     <div class="card full" id="errors-card">
@@ -881,6 +884,8 @@ function startSSE() {
   if (sseSource) sseSource.close();
   const logBox = document.getElementById('log-box');
   logBox.innerHTML = '';
+  document.getElementById('recent-scans-panel').style.display = 'none';
+  logBox.style.display = '';
   sseSource = new EventSource('/scan/stream');
   sseSource.onmessage = e => {
     const msg = JSON.parse(e.data);
@@ -912,7 +917,9 @@ async function pollProgress() {
         cancelBtn.textContent = '✕ Cancel';
         lbl.textContent = d.cancelled ? 'Cancelled' : `Done (${d.done} items)`;
         if (sseSource) { sseSource.close(); sseSource = null; }
-        loadStats(); loadMedia(); loadScanErrors();
+        document.getElementById('log-box').style.display = 'none';
+        document.getElementById('recent-scans-panel').style.display = '';
+        loadStats(); loadMedia(); loadScanErrors(); loadRecentScans();
         break;
       }
     } catch {}
@@ -1552,6 +1559,41 @@ const setSelectVal = (id, v) => { const el = document.getElementById(id); if (el
 const esc = s => (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+// ═══════════════════════ SCAN HISTORY ═══════════════════════
+function fmtDuration(s) {
+  if (s == null) return '—';
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60), r = s % 60;
+  if (m < 60) return r > 0 ? `${m}m ${r}s` : `${m}m`;
+  const h = Math.floor(m / 60), rm = m % 60;
+  return rm > 0 ? `${h}h ${rm}m` : `${h}h`;
+}
+
+async function loadRecentScans() {
+  const body = document.getElementById('recent-scans-body');
+  try {
+    const runs = await apiFetch('/api/scan-runs');
+    if (!runs.length) {
+      body.innerHTML = '<span style="color:var(--muted);font-size:13px">No scans recorded yet</span>';
+      return;
+    }
+    const typeBadge = t => t === 'full'
+      ? `<span style="color:var(--accent)">full</span>`
+      : `<span style="color:var(--muted)">incremental</span>`;
+    body.innerHTML = `<div style="overflow-x:auto"><table>
+      <thead><tr><th>Started</th><th>Type</th><th>Scanned</th><th>Tagged</th><th>Images</th><th>Duration</th></tr></thead>
+      <tbody>${runs.map(r => `<tr>
+        <td style="font-size:12px;color:var(--muted)">${r.started_at ? fmt(r.started_at) : '—'}</td>
+        <td>${typeBadge(r.scan_type)}</td>
+        <td>${r.items_scanned ?? '—'}</td>
+        <td>${r.items_tagged ?? '—'}</td>
+        <td>${r.items_image_modified ?? '—'}</td>
+        <td style="color:var(--muted)">${fmtDuration(r.duration_seconds)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  } catch { body.innerHTML = '<span style="color:var(--muted)">—</span>'; }
+}
+
 // ═══════════════════════ SCAN ERRORS ═══════════════════════
 async function loadScanErrors() {
   const body = document.getElementById('errors-body');
@@ -1594,6 +1636,7 @@ loadStats();
 loadHealth();
 loadMedia();
 loadScanErrors();
+loadRecentScans();
 // Pre-load settings so preview controls are ready before the user visits the tab
 apiFetch('/api/settings').then(s => { settings = s; populateForm(s); }).catch(() => {});
 setInterval(loadStats, 30000);

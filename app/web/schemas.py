@@ -31,6 +31,17 @@ class MediaItem(BaseModel):
     last_scanned: str | None
 
 
+class ScanRunItem(BaseModel):
+    id: int
+    scan_type: str | None
+    started_at: str | None
+    completed_at: str | None
+    items_scanned: int
+    items_tagged: int
+    items_image_modified: int
+    duration_seconds: int | None
+
+
 class ConfigResponse(BaseModel):
     yaml: str
 
