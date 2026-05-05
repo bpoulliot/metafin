@@ -50,14 +50,6 @@ jobs:
           git push origin "$BRANCH"
           git push origin "v${{ steps.bump.outputs.version }}"
 
-      - name: Trigger docker publish
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh workflow run docker-publish.yml \
-            --repo ${{ github.repository }} \
-            --field tag=v${{ steps.bump.outputs.version }}
-
       - name: Open VERSION bump PR (auto-merges after CI)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
