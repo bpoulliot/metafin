@@ -467,14 +467,6 @@
           <input type="password" id="s-jf-apikey" placeholder="Dashboard → API Keys">
         </div>
       </div>
-      <div class="btn-row" style="margin-top:8px">
-        <button class="btn sm" onclick="fetchLibraries()">Fetch libraries</button>
-        <span id="jf-status" style="font-size:12px;color:var(--muted)"></span>
-      </div>
-      <div class="field" style="margin-top:12px">
-        <label>Libraries to scan <span style="font-weight:400;text-transform:none">(empty = all)</span></label>
-        <div id="lib-list" class="lib-list" style="color:var(--muted);font-size:12px">Click "Fetch libraries" to load.</div>
-      </div>
     </div>
   </div>
 
@@ -560,7 +552,15 @@
           </div>
         </div>
       </div>
-      <div class="field" style="margin-top:4px">
+      <div class="field" style="margin-top:12px">
+        <label>Jellyfin libraries <span style="font-weight:400;text-transform:none">(empty = all)</span></label>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn sm" onclick="fetchLibraries()">Fetch libraries from Jellyfin</button>
+          <span id="jf-status" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+        <div id="lib-list" class="lib-list" style="color:var(--muted);font-size:12px;margin-top:6px">Click "Fetch libraries from Jellyfin" to load.</div>
+      </div>
+      <div class="field" style="margin-top:12px">
         <label>Path filter <span style="font-weight:400;text-transform:none">(restrict scan to these path prefixes — empty = all media)</span></label>
         <div class="inline-row" style="margin-top:6px">
           <input type="text" id="s-path-filter-input" placeholder="/mnt/media/4K">
@@ -572,6 +572,7 @@
           <div id="rootfolder-list" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px"></div>
         </div>
       </div>
+      <p class="hint" style="margin-top:10px">⚠ Jellyfin returns all items in the selected libraries before path filters are applied. Path filters narrow which files are probed and overlaid but do not limit the Jellyfin API fetch.</p>
     </div>
   </div>
 
