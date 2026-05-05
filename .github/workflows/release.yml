@@ -50,20 +50,30 @@ jobs:
           git push origin "$BRANCH"
           git push origin "v${{ steps.bump.outputs.version }}"
 
+      - name: Trigger docker publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run docker-publish.yml \
+            --repo ${{ github.repository }} \
+            --field tag=v${{ steps.bump.outputs.version }}
+
       - name: Open VERSION bump PR (auto-merges after CI)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr create \
+            --repo ${{ github.repository }} \
             --base main \
             --head "chore/release-v${{ steps.bump.outputs.version }}" \
             --title "chore: release v${{ steps.bump.outputs.version }}" \
             --body "Automated VERSION file bump. Merges automatically once CI passes." \
             --label "automated"
           gh pr merge \
-            --head "chore/release-v${{ steps.bump.outputs.version }}" \
+            --repo ${{ github.repository }} \
             --squash \
-            --auto
+            --auto \
+            "chore/release-v${{ steps.bump.outputs.version }}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
