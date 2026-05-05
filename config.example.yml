@@ -1,0 +1,45 @@
+jellyfin:
+  url: http://jellyfin:8096
+  api_key: ""
+  library_ids: []  # empty = all libraries
+
+# Sonarr integration is optional. Remove or leave empty to use Jellyfin only.
+# sonarr:
+#   instances:
+#     - name: general
+#       url: http://sonarr:8989
+#       api_key: ""
+
+# Radarr integration is optional. Remove or leave empty to use Jellyfin only.
+# radarr:
+#   instances:
+#     - name: general
+#       url: http://radarr:7878
+#       api_key: ""
+
+scan:
+  schedule: "0 3 * * *"    # cron expression; empty = manual-only
+  incremental: true
+  path_filters: []  # list of path prefixes to include (e.g. /data/movies); empty = all
+
+tags:
+  managed_prefix: "mf-"        # prefix for all tags written by Metafin
+  dual_audio_tag: "dual-audio"  # applied when exactly 2 audio languages found
+  multi_audio_tag: "re-encode"  # applied when 3+ audio languages found
+
+image:
+  targets:
+    - poster.jpg
+    - poster.png
+    - folder.jpg
+    - folder.png
+  backup_suffix: ".orig"
+  badge_position: bottom-left   # bottom-left | bottom-right | top-left | top-right
+  badge_opacity: 0.65
+  font_size: 20
+
+auth:
+  username: admin
+  password_hash: ""  # auto-generated on first run; set via METAFIN_USERNAME/METAFIN_PASSWORD env vars
+
+log_level: INFO

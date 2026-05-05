@@ -1,0 +1,35 @@
+services:
+  metafin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: metafin
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - "${USERDIR}/docker/metafin:/config"
+      # Media mounts must match Jellyfin's container-side paths exactly so that
+      # file paths returned by the Jellyfin API are accessible to Metafin.
+      - "${MCORE}:/media/core:rw"
+      - "${MFLUX}:/media/flux:rw"
+      - "${MFOURK}:/media/4K:rw"
+      - "${LUXE}:/media/luxe:rw"
+      - "${XTOR}:/media/xtor:rw"
+      - "/mnt/media/scopuli:/media/scopuli:rw"
+    ports:
+      - "127.0.0.1:7755:7755"
+    networks:
+      - frontend
+      - vpn
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7755/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    mem_limit: 1g
+    cpus: 2.0
+    restart: unless-stopped

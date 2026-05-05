@@ -1,0 +1,70 @@
+from __future__ import annotations
+
+import logging
+
+from .config import TagsConfig
+from .scanner import AudioTrack, SubTrack
+
+log = logging.getLogger(__name__)
+
+
+def _video_tags(prefix: str, resolution: str, video_codec: str | None, hdr_type: str | None) -> list[str]:
+    tags = []
+    if resolution and resolution != "unknown":
+        tags.append(f"{prefix}{resolution}")
+    if video_codec:
+        tags.append(f"{prefix}{video_codec}")
+    if hdr_type:
+        tags.append(f"{prefix}{hdr_type}")
+    return tags
+
+
+def _audio_tags(
+    prefix: str,
+    audio_tracks: list[AudioTrack],
+    dual_tag: str,
+    multi_tag: str,
+) -> list[str]:
+    tags = []
+    for t in audio_tracks:
+        if t.lang and t.lang != "UND":
+            tags.append(f"{prefix}{t.lang}")
+        tags.append(f"{prefix}{t.codec}")
+    langs = [t.lang for t in audio_tracks if t.lang and t.lang != "UND"]
+    if len(langs) == 2:
+        tags.append(f"{prefix}{dual_tag}")
+    elif len(langs) >= 3:
+        tags.append(f"{prefix}{multi_tag}")
+    return list(dict.fromkeys(tags))  # dedup preserving order
+
+
+def _subtitle_tags(prefix: str, subtitle_tracks: list[SubTrack]) -> list[str]:
+    return list(dict.fromkeys(f"{prefix}sub-{t.lang}" for t in subtitle_tracks if t.lang and t.lang != "UND"))
+
+
+def _rating_tag(prefix: str, content_rating: str | None) -> list[str]:
+    return [f"{prefix}{content_rating}"] if content_rating else []
+
+
+def build_tags(
+    resolution: str,
+    video_codec: str | None,
+    hdr_type: str | None,
+    audio_tracks: list[AudioTrack],
+    subtitle_tracks: list[SubTrack],
+    content_rating: str | None,
+    cfg: TagsConfig,
+    destination: str,  # "jellyfin" | "sonarr" | "radarr" | "poster"
+) -> list[str]:
+    p = cfg.managed_prefix
+    d = cfg.destinations
+    tags: list[str] = []
+    if destination in d.video:
+        tags += _video_tags(p, resolution, video_codec, hdr_type)
+    if destination in d.audio:
+        tags += _audio_tags(p, audio_tracks, cfg.dual_audio_tag, cfg.multi_audio_tag)
+    if destination in d.subtitles:
+        tags += _subtitle_tags(p, subtitle_tracks)
+    if destination in d.rating:
+        tags += _rating_tag(p, content_rating)
+    return tags
