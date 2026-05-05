@@ -279,7 +279,31 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
     images_modified = 0
     prefix = cfg.tags.managed_prefix
 
-    # Phase 1: resolve file paths and filter already-current items (sequential — uses SQLite reads)
+    # Phase 1a: pre-resolve episode paths for all series in parallel (I/O-bound network calls)
+    series_ids_needing_path: list[str] = []
+    for item in items:
+        if item.get("Type") != "Series":
+            continue
+        media_sources = item.get("MediaSources") or []
+        fp = media_sources[0].get("Path", "") if media_sources else item.get("Path", "")
+        if fp and Path(fp).is_dir():
+            series_ids_needing_path.append(item.get("Id", ""))
+
+    resolved_episode_paths: dict[str, str] = {}
+    if series_ids_needing_path:
+        progress.emit(f"[metafin] Resolving episode paths for {len(series_ids_needing_path)} series…")
+        workers = min(cfg.scan.max_workers, len(series_ids_needing_path))
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            future_to_sid = {pool.submit(_get_first_episode_path, jf, sid): sid for sid in series_ids_needing_path}
+            for future in as_completed(future_to_sid):
+                sid = future_to_sid[future]
+                try:
+                    resolved_episode_paths[sid] = future.result() or ""
+                except Exception as exc:
+                    log.debug("Episode path resolution error for %s: %s", sid, exc)
+                    resolved_episode_paths[sid] = ""
+
+    # Phase 1b: filter already-current items (sequential — SQLite reads)
     to_probe: list[tuple[dict, str, str, float]] = []  # (item, file_path, item_root, mtime)
     for item in items:
         if progress.cancelled:
@@ -297,7 +321,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
         item_root = item.get("Path", "")
         if item.get("Type") == "Series" and file_path and Path(file_path).is_dir():
             item_root = file_path
-            file_path = _get_first_episode_path(jf, item_id) or ""
+            file_path = resolved_episode_paths.get(item_id, "")
 
         if not file_path or not Path(file_path).exists():
             msg = f"skip (no file): {name} | path tried: {file_path or '(empty)'}"
