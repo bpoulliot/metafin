@@ -114,6 +114,124 @@ def _clients_from_config(cfg: AppConfig) -> tuple[JellyfinClient, list[SonarrCli
     return jf, sonarrs, radarrs
 
 
+def _close_clients(jf: JellyfinClient, sonarrs: list[SonarrClient], radarrs: list[RadarrClient]) -> None:
+    jf.close()
+    for c in sonarrs:
+        c.close()
+    for c in radarrs:
+        c.close()
+
+
+def _process_one_item(
+    jf: JellyfinClient,
+    sonarrs: list[SonarrClient],
+    radarrs: list[RadarrClient],
+    session: object,
+    cfg: AppConfig,
+    item: dict,
+    file_path: str,
+    item_root: str,
+    mtime: float,
+    info: MediaInfo,
+) -> bool:
+    """Tag, overlay, and persist one media item. Returns True if an image was modified."""
+    item_id = item.get("Id", "")
+    name = item.get("Name", item_id)
+    prefix = cfg.tags.managed_prefix
+
+    jf_rating = item.get("OfficialRating") or ""
+    arr_cert = _get_arr_certification(item, sonarrs, radarrs) if not jf_rating else ""
+    content_rating = jf_rating or arr_cert or None
+
+    jf_tags = build_tags(
+        info.resolution,
+        info.video_codec,
+        info.hdr_type,
+        info.audio_tracks,
+        info.subtitle_tracks,
+        content_rating,
+        cfg.tags,
+        destination="jellyfin",
+    )
+    sonarr_tags = build_tags(
+        info.resolution,
+        info.video_codec,
+        info.hdr_type,
+        info.audio_tracks,
+        info.subtitle_tracks,
+        content_rating,
+        cfg.tags,
+        destination="sonarr",
+    )
+    radarr_tags = build_tags(
+        info.resolution,
+        info.video_codec,
+        info.hdr_type,
+        info.audio_tracks,
+        info.subtitle_tracks,
+        content_rating,
+        cfg.tags,
+        destination="radarr",
+    )
+
+    try:
+        fresh = jf.get_item_by_id(item_id) or item
+        jf.set_managed_tags(item_id, fresh, prefix, jf_tags, fallback_rating=arr_cert)
+    except Exception as exc:
+        log.warning("Jellyfin tag error for %s: %s", name, exc)
+
+    sonarr_id = _find_arr_id(item, "Sonarr")
+    if sonarr_id and sonarrs:
+        for client in sonarrs:
+            try:
+                client.set_managed_tags(sonarr_id, prefix, sonarr_tags)
+            except Exception as exc:
+                log.debug("Sonarr tag error [%s] %s: %s", client.name, name, exc)
+
+    radarr_id = _find_arr_id(item, "Radarr")
+    if radarr_id and radarrs:
+        for client in radarrs:
+            try:
+                client.set_managed_tags(radarr_id, prefix, radarr_tags)
+            except Exception as exc:
+                log.debug("Radarr tag error [%s] %s: %s", client.name, name, exc)
+
+    item_folder = Path(item_root) if item_root else Path(file_path).parent
+    if not item_folder.is_dir():
+        item_folder = Path(file_path).parent
+
+    groups, rating_group = _make_badge_groups(info, content_rating, cfg)
+    modified_path = None
+    image_modified = False
+    if groups or rating_group:
+        try:
+            modified_path = apply_overlay(item_folder, groups, rating_group, cfg.image)
+            if modified_path:
+                image_modified = True
+                jf.refresh_item(item_id)
+        except Exception as exc:
+            log.warning("Overlay error for %s: %s", name, exc)
+
+    upsert_media_state(
+        session,
+        item_id=f"jellyfin:{item_id}",
+        source="jellyfin",
+        file_path=file_path,
+        resolution=info.resolution,
+        languages=info.languages,
+        tags_applied=jf_tags,
+        image_path=str(modified_path) if modified_path else None,
+        file_mtime=mtime,
+        video_codec=info.video_codec,
+        hdr_type=info.hdr_type,
+        audio_tracks=[{"lang": t.lang, "codec": t.codec} for t in info.audio_tracks],
+        subtitle_tracks=[{"lang": t.lang, "format": t.format, "embedded": t.embedded} for t in info.subtitle_tracks],
+        content_rating=content_rating,
+    )
+
+    return image_modified
+
+
 def _get_file_mtime(path: str) -> float:
     try:
         return os.path.getmtime(path)
@@ -261,6 +379,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
         progress.emit(msg)
         log.error(msg)
         session.close()
+        _close_clients(jf, sonarrs, radarrs)
         progress.finish(error=str(exc))
         return
 
@@ -282,7 +401,6 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
 
     tagged = 0
     images_modified = 0
-    prefix = cfg.tags.managed_prefix
 
     # Phase 1a: pre-resolve episode paths for all series in parallel (I/O-bound network calls)
     series_ids_needing_path: list[str] = []
@@ -383,109 +501,20 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
 
         progress.emit(f"  scanning: {name}")
 
-        jf_rating = item.get("OfficialRating") or ""
-        arr_cert = _get_arr_certification(item, sonarrs, radarrs) if not jf_rating else ""
-        content_rating = jf_rating or arr_cert or None
-
-        jf_tags = build_tags(
-            info.resolution,
-            info.video_codec,
-            info.hdr_type,
-            info.audio_tracks,
-            info.subtitle_tracks,
-            content_rating,
-            cfg.tags,
-            destination="jellyfin",
-        )
-        sonarr_tags = build_tags(
-            info.resolution,
-            info.video_codec,
-            info.hdr_type,
-            info.audio_tracks,
-            info.subtitle_tracks,
-            content_rating,
-            cfg.tags,
-            destination="sonarr",
-        )
-        radarr_tags = build_tags(
-            info.resolution,
-            info.video_codec,
-            info.hdr_type,
-            info.audio_tracks,
-            info.subtitle_tracks,
-            content_rating,
-            cfg.tags,
-            destination="radarr",
-        )
-
-        try:
-            fresh = jf.get_item_by_id(item_id) or item
-            jf.set_managed_tags(item_id, fresh, prefix, jf_tags, fallback_rating=arr_cert)
-        except Exception as exc:
-            log.warning("Jellyfin tag error for %s: %s", name, exc)
-
-        sonarr_id = _find_arr_id(item, "Sonarr")
-        if sonarr_id and sonarrs:
-            for client in sonarrs:
-                try:
-                    client.set_managed_tags(sonarr_id, prefix, sonarr_tags)
-                except Exception as exc:
-                    log.debug("Sonarr tag error [%s] %s: %s", client.name, name, exc)
-
-        radarr_id = _find_arr_id(item, "Radarr")
-        if radarr_id and radarrs:
-            for client in radarrs:
-                try:
-                    client.set_managed_tags(radarr_id, prefix, radarr_tags)
-                except Exception as exc:
-                    log.debug("Radarr tag error [%s] %s: %s", client.name, name, exc)
-
+        image_modified = _process_one_item(jf, sonarrs, radarrs, session, cfg, item, file_path, item_root, mtime, info)
         tagged += 1
-
-        item_folder = Path(item_root) if item_root else Path(file_path).parent
-        if not item_folder.is_dir():
-            item_folder = Path(file_path).parent
-
-        groups, rating_group = _make_badge_groups(info, content_rating, cfg)
-        modified_path = None
-        if groups or rating_group:
-            try:
-                modified_path = apply_overlay(item_folder, groups, rating_group, cfg.image)
-                if modified_path:
-                    images_modified += 1
-                    jf.refresh_item(item_id)
-            except Exception as exc:
-                log.warning("Overlay error for %s: %s", name, exc)
-
-        upsert_media_state(
-            session,
-            item_id=f"jellyfin:{item_id}",
-            source="jellyfin",
-            file_path=file_path,
-            resolution=info.resolution,
-            languages=info.languages,
-            tags_applied=jf_tags,
-            image_path=str(modified_path) if modified_path else None,
-            file_mtime=mtime,
-            video_codec=info.video_codec,
-            hdr_type=info.hdr_type,
-            audio_tracks=[{"lang": t.lang, "codec": t.codec} for t in info.audio_tracks],
-            subtitle_tracks=[
-                {"lang": t.lang, "format": t.format, "embedded": t.embedded} for t in info.subtitle_tracks
-            ],
-            content_rating=content_rating,
-        )
+        images_modified += image_modified
 
         progress.emit(
             f"  done: {name} | {info.resolution} | {info.video_codec or '-'} | {info.hdr_type or '-'}"
             f" | audio: {len(info.audio_tracks)} | subs: {len(info.subtitle_tracks)}"
-            f" | tags: {jf_tags}"
         )
         progress.done += 1
 
     set_meta(session, _TAG_CONFIG_KEY, current_hash)
     finish_scan_run(session, run, scanned=len(items), tagged=tagged, images=images_modified)
     session.close()
+    _close_clients(jf, sonarrs, radarrs)
     progress.finish()
     progress.emit(f"[metafin] Scan complete — scanned={len(items)}, tagged={tagged}, images={images_modified}")
 
@@ -537,3 +566,68 @@ def run_incremental_scan(cfg: AppConfig) -> None:
         log.warning("Scan already in progress, skipping")
         return
     _run_scan(cfg, incremental=True)
+
+
+def _resolve_webhook_jf_item(jf: JellyfinClient, source: str, payload: dict) -> dict | None:
+    """Resolve the Jellyfin item dict from an inbound webhook payload."""
+    if source == "jellyfin":
+        item_id = payload.get("ItemId") or payload.get("item_id")
+        if not item_id:
+            return None
+        return jf.get_item_by_id(item_id) or None
+
+    if source == "sonarr":
+        series = payload.get("series") or {}
+        tvdb_id = series.get("tvdbId")
+        if tvdb_id:
+            return jf.find_item_by_provider_id("Tvdb", str(tvdb_id))
+        return None
+
+    if source == "radarr":
+        movie = payload.get("movie") or {}
+        tmdb_id = movie.get("tmdbId")
+        if tmdb_id:
+            return jf.find_item_by_provider_id("Tmdb", str(tmdb_id))
+        return None
+
+    return None
+
+
+def handle_webhook(cfg: AppConfig, source: str, payload: dict) -> None:
+    """Background task: resolve, probe, tag, and overlay a single item from a webhook event."""
+    jf, sonarrs, radarrs = _clients_from_config(cfg)
+    try:
+        item = _resolve_webhook_jf_item(jf, source, payload)
+        if not item:
+            log.info("Webhook %s: could not resolve Jellyfin item from payload", source)
+            return
+
+        item_id = item.get("Id", "")
+        name = item.get("Name", item_id)
+
+        media_sources = item.get("MediaSources") or []
+        file_path = media_sources[0].get("Path", "") if media_sources else item.get("Path", "")
+        item_root = item.get("Path", "")
+
+        if item.get("Type") == "Series" and file_path and Path(file_path).is_dir():
+            item_root = file_path
+            file_path = _get_first_episode_path(jf, item_id) or ""
+
+        if not file_path or not Path(file_path).exists():
+            log.warning("Webhook %s: no accessible file for %s", source, name)
+            return
+
+        mtime = _get_file_mtime(file_path)
+        info = probe_file(file_path)
+        if not info:
+            log.warning("Webhook %s: ffprobe failed for %s", source, name)
+            return
+
+        session = get_session()
+        image_modified = _process_one_item(jf, sonarrs, radarrs, session, cfg, item, file_path, item_root, mtime, info)
+        session.close()
+        log.info("Webhook %s: processed %s | image_modified=%s", source, name, image_modified)
+    except Exception as exc:
+        log.error("Webhook %s handler error: %s", source, exc)
+    finally:
+        _close_clients(jf, sonarrs, radarrs)
