@@ -233,15 +233,17 @@ def upsert_scan_error(
         existing.file_path = file_path
         existing.item_name = item_name
     else:
-        session.add(ScanError(
-            item_id=item_id,
-            item_name=item_name,
-            file_path=file_path,
-            error_type=error_type,
-            first_seen=now,
-            last_seen=now,
-            scan_count=1,
-        ))
+        session.add(
+            ScanError(
+                item_id=item_id,
+                item_name=item_name,
+                file_path=file_path,
+                error_type=error_type,
+                first_seen=now,
+                last_seen=now,
+                scan_count=1,
+            )
+        )
     session.commit()
 
 

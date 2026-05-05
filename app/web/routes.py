@@ -417,7 +417,11 @@ async def jellyfin_test(request: Request, body: _ConnTestReq):
         try:
             raw = jf.get_libraries()
             libraries = [
-                {"id": lib.get("ItemId", lib.get("Id", "")), "name": lib.get("Name", ""), "type": lib.get("CollectionType", "")}
+                {
+                    "id": lib.get("ItemId", lib.get("Id", "")),
+                    "name": lib.get("Name", ""),
+                    "type": lib.get("CollectionType", ""),
+                }
                 for lib in raw
             ]
         except Exception:
