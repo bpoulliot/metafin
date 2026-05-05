@@ -1,8 +1,6 @@
 services:
   metafin:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/bpoulliot/metafin:latest
     container_name: metafin
     environment:
       - PUID=${PUID}
