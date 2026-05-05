@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import threading
 from pathlib import Path
@@ -40,6 +41,7 @@ from .schemas import (
     StatsResponse,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
@@ -415,11 +417,11 @@ async def jellyfin_test(request: Request, body: _ConnTestReq):
         try:
             raw = jf.get_libraries()
             libraries = [
-                {"id": l.get("ItemId", l.get("Id", "")), "name": l.get("Name", ""), "type": l.get("CollectionType", "")}
-                for l in raw
+                {"id": lib.get("ItemId", lib.get("Id", "")), "name": lib.get("Name", ""), "type": lib.get("CollectionType", "")}
+                for lib in raw
             ]
         except Exception:
-            pass
+            logger.warning("Failed to fetch Jellyfin libraries for test endpoint", exc_info=True)
     return {"ok": h["ok"], "status": h["status"], "message": h["message"], "libraries": libraries}
 
 
