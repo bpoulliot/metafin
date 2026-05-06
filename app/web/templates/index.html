@@ -1641,6 +1641,17 @@ loadRecentScans();
 apiFetch('/api/settings').then(s => { settings = s; populateForm(s); }).catch(() => {});
 setInterval(loadStats, 30000);
 setInterval(loadHealth, 60000);
+// If a scan is already running when the page loads (e.g. after reload or container restart),
+// reconnect to the SSE stream and resume progress polling automatically.
+apiFetch('/scan/status').then(d => {
+  if (d.running) {
+    document.getElementById('btn-inc').disabled = true;
+    document.getElementById('btn-full').disabled = true;
+    document.getElementById('btn-cancel').style.display = '';
+    startSSE();
+    pollProgress();
+  }
+}).catch(() => {});
 </script>
 </body>
 </html>
