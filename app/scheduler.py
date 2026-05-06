@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -13,7 +14,8 @@ _JOB_ID = "metafin_incremental_scan"
 
 def start(schedule: str, scan_fn) -> None:
     global _scheduler
-    _scheduler = BackgroundScheduler(timezone="UTC")
+    tz = os.environ.get("TZ", "UTC") or "UTC"
+    _scheduler = BackgroundScheduler(timezone=tz)
     if schedule:
         _scheduler.add_job(
             scan_fn,

@@ -155,14 +155,16 @@ async def health(request: Request):
             radarr=[],
         )
     cfg = get_config()
-    jf = JellyfinClient(cfg.jellyfin.url, cfg.jellyfin.api_key)
-    jf_health = jf.health()
-    sonarr_status = [
-        {"name": inst.name, **SonarrClient(inst.url, inst.api_key).health()} for inst in cfg.sonarr.instances
-    ]
-    radarr_status = [
-        {"name": inst.name, **RadarrClient(inst.url, inst.api_key).health()} for inst in cfg.radarr.instances
-    ]
+    with JellyfinClient(cfg.jellyfin.url, cfg.jellyfin.api_key) as jf:
+        jf_health = jf.health()
+    sonarr_status = []
+    for inst in cfg.sonarr.instances:
+        with SonarrClient(inst.url, inst.api_key, inst.name) as sc:
+            sonarr_status.append({"name": inst.name, **sc.health()})
+    radarr_status = []
+    for inst in cfg.radarr.instances:
+        with RadarrClient(inst.url, inst.api_key, inst.name) as rc:
+            radarr_status.append({"name": inst.name, **rc.health()})
     return HealthResponse(status="ok", jellyfin=jf_health, sonarr=sonarr_status, radarr=radarr_status)
 
 
@@ -475,22 +477,22 @@ class _ArrTestReq(BaseModel):
 async def jellyfin_test(request: Request, body: _ConnTestReq):
     """Test Jellyfin connectivity with provided credentials — does not save config."""
     _require_user(request)
-    jf = JellyfinClient(body.url.rstrip("/"), body.api_key)
-    h = jf.health()
     libraries: list[dict] = []
-    if h["ok"]:
-        try:
-            raw = jf.get_libraries()
-            libraries = [
-                {
-                    "id": lib.get("ItemId", lib.get("Id", "")),
-                    "name": lib.get("Name", ""),
-                    "type": lib.get("CollectionType", ""),
-                }
-                for lib in raw
-            ]
-        except Exception:
-            logger.warning("Failed to fetch Jellyfin libraries for test endpoint", exc_info=True)
+    with JellyfinClient(body.url.rstrip("/"), body.api_key) as jf:
+        h = jf.health()
+        if h["ok"]:
+            try:
+                raw = jf.get_libraries()
+                libraries = [
+                    {
+                        "id": lib.get("ItemId", lib.get("Id", "")),
+                        "name": lib.get("Name", ""),
+                        "type": lib.get("CollectionType", ""),
+                    }
+                    for lib in raw
+                ]
+            except Exception:
+                logger.warning("Failed to fetch Jellyfin libraries for test endpoint", exc_info=True)
     return {"ok": h["ok"], "status": h["status"], "message": h["message"], "libraries": libraries}
 
 
@@ -504,7 +506,8 @@ async def arr_test(request: Request, body: _ArrTestReq):
         client = RadarrClient(body.url, body.api_key, "test")
     else:
         raise HTTPException(status_code=400, detail="arr_type must be sonarr or radarr")
-    return client.health()
+    with client:
+        return client.health()
 
 
 @router.post("/api/arr/rootfolders")
@@ -517,11 +520,12 @@ async def arr_rootfolders_test(request: Request, body: _ArrTestReq):
         client = RadarrClient(body.url, body.api_key, "test")
     else:
         raise HTTPException(status_code=400, detail="arr_type must be sonarr or radarr")
-    try:
-        folders = client._get("/rootfolder")
-        return [{"path": f.get("path", ""), "freeSpace": f.get("freeSpace", 0)} for f in folders]
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    with client:
+        try:
+            folders = client._get("/rootfolder")
+            return [{"path": f.get("path", ""), "freeSpace": f.get("freeSpace", 0)} for f in folders]
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.get("/api/sonarr/{instance_name}/rootfolders")
@@ -531,12 +535,12 @@ async def sonarr_rootfolders(request: Request, instance_name: str):
     inst = next((i for i in cfg.sonarr.instances if i.name == instance_name), None)
     if not inst:
         raise HTTPException(status_code=404, detail=f"Sonarr instance '{instance_name}' not found")
-    client = SonarrClient(inst.url, inst.api_key, inst.name)
-    try:
-        folders = client._get("/rootfolder")
-        return [{"path": f.get("path", ""), "freeSpace": f.get("freeSpace", 0)} for f in folders]
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    with SonarrClient(inst.url, inst.api_key, inst.name) as client:
+        try:
+            folders = client._get("/rootfolder")
+            return [{"path": f.get("path", ""), "freeSpace": f.get("freeSpace", 0)} for f in folders]
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.get("/api/radarr/{instance_name}/rootfolders")
@@ -546,12 +550,12 @@ async def radarr_rootfolders(request: Request, instance_name: str):
     inst = next((i for i in cfg.radarr.instances if i.name == instance_name), None)
     if not inst:
         raise HTTPException(status_code=404, detail=f"Radarr instance '{instance_name}' not found")
-    client = RadarrClient(inst.url, inst.api_key, inst.name)
-    try:
-        folders = client._get("/rootfolder")
-        return [{"path": f.get("path", ""), "freeSpace": f.get("freeSpace", 0)} for f in folders]
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    with RadarrClient(inst.url, inst.api_key, inst.name) as client:
+        try:
+            folders = client._get("/rootfolder")
+            return [{"path": f.get("path", ""), "freeSpace": f.get("freeSpace", 0)} for f in folders]
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
