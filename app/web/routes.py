@@ -235,7 +235,7 @@ async def scan_status(request: Request):
 async def scan_stream(request: Request):
     _require_user(request)
     queue: asyncio.Queue[str] = asyncio.Queue()
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     def push(msg: str) -> None:
         asyncio.run_coroutine_threadsafe(queue.put(msg), loop)
@@ -255,7 +255,11 @@ async def scan_stream(request: Request):
         finally:
             progress.unsubscribe(push)
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # ---------------------------------------------------------------------------

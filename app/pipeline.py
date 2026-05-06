@@ -440,8 +440,13 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
 
     # Phase 1b: filter already-current items (sequential — SQLite reads)
     log.info("Phase 1b: checking %d items (mtime filter, network stat calls)…", len(items))
+    progress.emit(f"[metafin] Phase 1b: checking {len(items)} items…")
     to_probe: list[tuple[dict, str, str, float]] = []  # (item, file_path, item_root, mtime)
+    _checked = 0
     for item in items:
+        _checked += 1
+        if _checked % 1000 == 0:
+            progress.emit(f"[metafin] Checked {_checked}/{len(items)} items…")
         if progress.cancelled:
             progress.emit("[metafin] Scan cancelled by user")
             break
