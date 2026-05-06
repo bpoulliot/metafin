@@ -465,10 +465,11 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
             file_path = resolved_episode_paths.get(item_id, "")
 
         if not file_path or not Path(file_path).exists():
-            msg = f"skip (no file): {name} | path tried: {file_path or '(empty)'}"
+            error_type = "no_path" if not file_path else "no_file"
+            msg = f"skip ({error_type}): {name} | path tried: {file_path or '(empty)'}"
             progress.emit(f"  {msg}")
             log.warning(msg)
-            upsert_scan_error(session, item_id, name, file_path or "", "no_file")
+            upsert_scan_error(session, item_id, name, file_path or "", error_type)
             progress.done += 1
             continue
 
@@ -485,7 +486,10 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
         to_probe.append((item, file_path, item_root, mtime))
 
     # Phase 2: parallel ffprobe — pure I/O, no shared state writes
+    # Rebase total so each to_probe item counts as 2 units (ffprobe + tag).
+    # Skipped items already consumed 1 unit each; to_probe items will consume 2.
     log.info("Phase 1b complete: %d items queued for probe", len(to_probe))
+    progress.total = progress.done + len(to_probe) * 2
     max_workers = min(cfg.scan.max_workers, max(1, len(to_probe)))
     probe_results: dict[str, MediaInfo | None] = {}
     if to_probe:
@@ -503,6 +507,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
                     log.warning("probe_file error for %s: %s", fp, exc)
                     probe_results[fp] = None
                 probed += 1
+                progress.done += 1
                 if probed % 100 == 0 or probed == total_probe:
                     progress.emit(f"[metafin] Probed {probed}/{total_probe} files…")
 

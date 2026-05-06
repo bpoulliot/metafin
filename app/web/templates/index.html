@@ -1617,15 +1617,22 @@ async function loadScanErrors() {
     }
     countEl.textContent = `(${errors.length})`;
     clearBtn.style.display = '';
-    const typeLabel = t => t === 'probe_failed'
-      ? '<span style="color:var(--red)">ffprobe failed</span>'
-      : '<span style="color:var(--yellow)">file not found</span>';
+    const typeLabel = t => {
+      if (t === 'probe_failed') return '<span style="color:var(--red)">ffprobe failed</span>';
+      if (t === 'no_file') return '<span style="color:var(--yellow)">file not found</span>';
+      if (t === 'no_path') return '<span style="color:var(--muted)">no path from Jellyfin</span>';
+      if (t && t.startsWith('process_error')) return '<span style="color:var(--red)">tag/overlay error</span>';
+      return `<span style="color:var(--muted)">${t||'unknown'}</span>`;
+    };
     body.innerHTML = `<div style="overflow-x:auto"><table>
-      <thead><tr><th>Item</th><th>Error</th><th>Path</th><th>Scans</th><th>Last seen</th></tr></thead>
+      <thead><tr><th>Item</th><th>Error</th><th>Path tried</th><th>Scans</th><th>Last seen</th></tr></thead>
       <tbody>${errors.map(e => `<tr>
-        <td title="${e.item_id||''}">${e.item_name||e.item_id||'—'}</td>
+        <td>
+          <div>${e.item_name||e.item_id||'—'}</div>
+          <div style="font-size:10px;color:var(--muted);font-family:monospace">${e.item_id||''}</div>
+        </td>
         <td>${typeLabel(e.error_type)}</td>
-        <td style="font-size:11px;color:var(--muted);max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${e.file_path||''}">${e.file_path||'—'}</td>
+        <td style="font-size:11px;color:var(--muted);font-family:monospace;word-break:break-all;max-width:500px">${e.file_path||'<em>empty</em>'}</td>
         <td style="color:var(--muted)">${e.scan_count}</td>
         <td style="color:var(--muted);font-size:11px">${e.last_seen ? fmt(e.last_seen) : '—'}</td>
       </tr>`).join('')}</tbody>
