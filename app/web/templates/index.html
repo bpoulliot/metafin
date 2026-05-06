@@ -895,6 +895,13 @@ function startSSE() {
     logBox.appendChild(div);
     logBox.scrollTop = logBox.scrollHeight;
   };
+  sseSource.onerror = () => {
+    const div = document.createElement('div');
+    div.className = 'line err';
+    div.textContent = '[metafin] Live log connection lost — retrying…';
+    logBox.appendChild(div);
+    logBox.scrollTop = logBox.scrollHeight;
+  };
 }
 
 async function pollProgress() {

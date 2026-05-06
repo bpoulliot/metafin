@@ -156,7 +156,7 @@ def probe_file(path: str | Path) -> MediaInfo | None:
     cmd = [
         "ffprobe",
         "-v",
-        "quiet",
+        "error",
         "-probesize",
         "10M",
         "-analyzeduration",
@@ -176,7 +176,8 @@ def probe_file(path: str | Path) -> MediaInfo | None:
         return None
 
     if result.returncode != 0:
-        log.warning("ffprobe failed on %s: %s", path, result.stderr[:200])
+        stderr = result.stderr.strip()[:500]
+        log.warning("ffprobe failed on %s:\n%s", path, stderr or "(no stderr output)")
         return None
 
     try:
