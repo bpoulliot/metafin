@@ -914,7 +914,7 @@ async function pollProgress() {
       const d = await apiFetch('/scan/status');
       const pct = d.total > 0 ? Math.round(d.done/d.total*100) : 0;
       bar.style.width = pct + '%';
-      lbl.textContent = d.running ? `${Math.round(d.done)} / ${d.total}${d.current_item ? ' — '+d.current_item : ''}` : `Done (${d.total} items)`;
+      lbl.textContent = d.running ? `${pct}%${d.current_item ? ' — '+d.current_item : ''}` : `Done (${d.total} items)`;
       if (!d.running) {
         document.getElementById('btn-inc').disabled = false;
         document.getElementById('btn-full').disabled = false;
