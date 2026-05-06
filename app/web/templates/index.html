@@ -909,6 +909,7 @@ async function pollProgress() {
   const bar = document.getElementById('progress-bar');
   const lbl = document.getElementById('progress-label');
   wrap.style.display = '';
+  let polls = 0;
   while (true) {
     try {
       const d = await apiFetch('/scan/status');
@@ -929,6 +930,8 @@ async function pollProgress() {
         loadStats(); loadMedia(); loadScanErrors(); loadRecentScans();
         break;
       }
+      polls++;
+      if (polls % 10 === 0) loadScanErrors();
     } catch {}
     await sleep(1500);
   }
