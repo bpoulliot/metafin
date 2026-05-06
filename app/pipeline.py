@@ -486,10 +486,9 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
         to_probe.append((item, file_path, item_root, mtime))
 
     # Phase 2: parallel ffprobe — pure I/O, no shared state writes
-    # Rebase total so each to_probe item counts as 2 units (ffprobe + tag).
-    # Skipped items already consumed 1 unit each; to_probe items will consume 2.
+    # Each to_probe item contributes 0.5 in Phase 2 and 0.5 in Phase 3,
+    # so total stays at len(items) and the label always shows real item counts.
     log.info("Phase 1b complete: %d items queued for probe", len(to_probe))
-    progress.total = progress.done + len(to_probe) * 2
     max_workers = min(cfg.scan.max_workers, max(1, len(to_probe)))
     probe_results: dict[str, MediaInfo | None] = {}
     if to_probe:
@@ -507,7 +506,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
                     log.warning("probe_file error for %s: %s", fp, exc)
                     probe_results[fp] = None
                 probed += 1
-                progress.done += 1
+                progress.done += 0.5
                 if probed % 100 == 0 or probed == total_probe:
                     progress.emit(f"[metafin] Probed {probed}/{total_probe} files…")
 
@@ -527,7 +526,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
             if info is None:
                 progress.emit(f"  ffprobe failed: {name} | path: {file_path}")
                 upsert_scan_error(session, item_id, name, file_path, "probe_failed")
-                progress.done += 1
+                progress.done += 0.5
                 continue
 
             progress.emit(f"  scanning: {name}")
@@ -539,7 +538,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
             except Exception as exc:
                 log.error("Unhandled error processing %s: %s", name, exc, exc_info=True)
                 upsert_scan_error(session, item_id, name, file_path, f"process_error: {exc}")
-                progress.done += 1
+                progress.done += 0.5
                 continue
 
             tagged += 1
@@ -549,7 +548,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
                 f"  done: {name} | {info.resolution} | {info.video_codec or '-'} | {info.hdr_type or '-'}"
                 f" | audio: {len(info.audio_tracks)} | subs: {len(info.subtitle_tracks)}"
             )
-            progress.done += 1
+            progress.done += 0.5
     finally:
         set_meta(session, _TAG_CONFIG_KEY, current_hash)
         finish_scan_run(session, run, scanned=len(items), tagged=tagged, images=images_modified)
