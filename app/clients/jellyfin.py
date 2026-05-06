@@ -7,7 +7,9 @@ import httpx
 
 log = logging.getLogger(__name__)
 
-ITEM_FIELDS = "MediaStreams,Tags,Path,Overview,ParentId,OfficialRating,ProviderIds"
+ITEM_FIELDS = (
+    "MediaStreams,Tags,Path,Overview,ParentId,OfficialRating,ProviderIds,Genres,Studios,Taglines,LockData,LockedFields"
+)
 
 
 class JellyfinClient:

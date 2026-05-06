@@ -24,6 +24,10 @@ class RadarrClient:
     def __exit__(self, *_) -> None:
         self.close()
 
+    def preload(self) -> None:
+        """Load all movies into an id→dict cache to avoid per-item GETs during scanning."""
+        self._movie_cache: dict[int, dict] = {m["id"]: m for m in self._get("/movie")}
+
     def _get(self, path: str, **params) -> Any:
         r = self._client.get(f"{self.base}/api/v3{path}", params=params)
         r.raise_for_status()
@@ -76,7 +80,13 @@ class RadarrClient:
         return self._get(f"/movie/{movie_id}")
 
     def set_managed_tags(self, movie_id: int, prefix: str, new_tag_labels: list[str]) -> None:
-        movie = self.get_movie_by_id(movie_id)
+        cache = getattr(self, "_movie_cache", None)
+        if cache is not None:
+            movie = cache.get(movie_id)
+            if movie is None:
+                return  # movie not in this instance
+        else:
+            movie = self.get_movie_by_id(movie_id)
         if self._tag_cache is None:
             self._tag_cache = self._load_tags()
 
