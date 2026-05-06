@@ -482,80 +482,73 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
 
         to_probe.append((item, file_path, item_root, mtime))
 
-    # Phase 2: parallel ffprobe — pure I/O, no shared state writes
-    # Each to_probe item contributes 0.5 in Phase 2 and 0.5 in Phase 3,
-    # so total stays at len(items) and the label always shows real item counts.
+    # Free the full items list — to_probe holds refs only to items that need processing.
+    # Skipped/already-current items can now be GC'd.
+    items_count = len(items)
+    del items
+
+    # Phase 2+3 merged: probe files in parallel; process (tag, overlay, persist) each result
+    # immediately as it arrives instead of accumulating all probe_results before Phase 3.
+    # Each item contributes 0.5 on probe completion and 0.5 on process completion so the
+    # progress total stays at len(items_count) and shows real item counts throughout.
     log.info("Phase 1b complete: %d items queued for probe", len(to_probe))
     max_workers = min(cfg.scan.max_workers, max(1, len(to_probe)))
-    probe_results: dict[str, MediaInfo | None] = {}
     if to_probe:
         total_probe = len(to_probe)
-        log.info("Phase 2: probing %d files with %d workers…", total_probe, max_workers)
+        log.info("Phase 2+3: probing and tagging %d items with %d workers…", total_probe, max_workers)
         progress.emit(f"[metafin] Probing {total_probe} files with {max_workers} workers…")
+        path_to_item: dict[str, tuple[dict, str, float]] = {
+            fp: (item, item_root, mtime) for item, fp, item_root, mtime in to_probe
+        }
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
-            future_to_path = {pool.submit(probe_file, fp): fp for _, fp, _, _ in to_probe}
+            future_to_path = {pool.submit(probe_file, fp): fp for fp in path_to_item}
             probed = 0
             for future in as_completed(future_to_path):
                 if progress.cancelled:
                     progress.emit("[metafin] Scan cancelled by user")
                     break
                 fp = future_to_path[future]
+                item, item_root, mtime = path_to_item[fp]
+                item_id = item.get("Id", "")
+                name = item.get("Name", item_id)
                 try:
-                    probe_results[fp] = future.result()
+                    info = future.result()
                 except Exception as exc:
                     log.warning("probe_file error for %s: %s", fp, exc)
-                    probe_results[fp] = None
+                    info = None
                 probed += 1
                 progress.done += 0.5
                 if probed % 100 == 0 or probed == total_probe:
                     progress.emit(f"[metafin] Probed {probed}/{total_probe} files…")
 
-    # Phase 3: tag, overlay, and persist results (sequential — SQLite writes, API calls)
-    log.info("Phase 3: tagging %d items…", len(to_probe))
-    try:
-        for item, file_path, item_root, mtime in to_probe:
-            if progress.cancelled:
-                progress.emit("[metafin] Scan cancelled by user")
-                break
+                if info is None:
+                    progress.emit(f"  ffprobe failed: {name} | path: {fp}")
+                    upsert_scan_error(session, item_id, name, fp, "probe_failed")
+                    progress.done += 0.5
+                    continue
 
-            item_id = item.get("Id", "")
-            name = item.get("Name", item_id)
-            progress.current_item = name
-
-            info = probe_results.get(file_path)
-            if info is None:
-                progress.emit(f"  ffprobe failed: {name} | path: {file_path}")
-                upsert_scan_error(session, item_id, name, file_path, "probe_failed")
+                progress.current_item = name
+                progress.emit(f"  scanning: {name}")
+                try:
+                    image_modified = _process_one_item(
+                        jf, sonarrs, radarrs, session, cfg, item, fp, item_root, mtime, info
+                    )
+                    tagged += 1
+                    images_modified += image_modified
+                    progress.emit(
+                        f"  done: {name} | {info.resolution} | {info.video_codec or '-'} | {info.hdr_type or '-'}"
+                        f" | audio: {len(info.audio_tracks)} | subs: {len(info.subtitle_tracks)}"
+                    )
+                except Exception as exc:
+                    log.error("Unhandled error processing %s: %s", name, exc, exc_info=True)
+                    upsert_scan_error(session, item_id, name, fp, f"process_error: {exc}")
                 progress.done += 0.5
-                continue
-
-            progress.emit(f"  scanning: {name}")
-
-            try:
-                image_modified = _process_one_item(
-                    jf, sonarrs, radarrs, session, cfg, item, file_path, item_root, mtime, info
-                )
-            except Exception as exc:
-                log.error("Unhandled error processing %s: %s", name, exc, exc_info=True)
-                upsert_scan_error(session, item_id, name, file_path, f"process_error: {exc}")
-                progress.done += 0.5
-                continue
-
-            tagged += 1
-            images_modified += image_modified
-
-            progress.emit(
-                f"  done: {name} | {info.resolution} | {info.video_codec or '-'} | {info.hdr_type or '-'}"
-                f" | audio: {len(info.audio_tracks)} | subs: {len(info.subtitle_tracks)}"
-            )
-            progress.done += 0.5
-    finally:
-        set_meta(session, _TAG_CONFIG_KEY, current_hash)
-        finish_scan_run(session, run, scanned=len(items), tagged=tagged, images=images_modified)
-        session.close()
-        _close_clients(jf, sonarrs, radarrs)
-        progress.finish()
-        progress.emit(f"[metafin] Scan complete — scanned={len(items)}, tagged={tagged}, images={images_modified}")
+    set_meta(session, _TAG_CONFIG_KEY, current_hash)
+    finish_scan_run(session, run, scanned=items_count, tagged=tagged, images=images_modified)
+    session.close()
+    _close_clients(jf, sonarrs, radarrs)
+    progress.finish()
+    progress.emit(f"[metafin] Scan complete — scanned={items_count}, tagged={tagged}, images={images_modified}")
 
 
 def _get_first_episode_path(jf: JellyfinClient, series_id: str) -> str | None:
