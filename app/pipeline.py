@@ -175,8 +175,7 @@ def _process_one_item(
     )
 
     try:
-        fresh = jf.get_item_by_id(item_id) or item
-        jf.set_managed_tags(item_id, fresh, prefix, jf_tags, fallback_rating=arr_cert)
+        jf.set_managed_tags(item_id, item, prefix, jf_tags, fallback_rating=arr_cert)
     except Exception as exc:
         log.warning("Jellyfin tag error for %s: %s", name, exc)
 
@@ -401,6 +400,19 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
 
     tagged = 0
     images_modified = 0
+
+    # Preload Sonarr/Radarr series and movie catalogues in parallel so Phase 3
+    # can use dict lookups instead of per-item API GETs.
+    if sonarrs or radarrs:
+        progress.emit("[metafin] Preloading Sonarr/Radarr catalogues…")
+        workers = max(1, len(sonarrs) + len(radarrs))
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(c.preload): c for c in sonarrs + radarrs}  # type: ignore[arg-type]
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as exc:
+                    log.warning("Preload failed for %s: %s", futures[future].name, exc)
 
     # Phase 1a: pre-resolve episode paths for all series in parallel (I/O-bound network calls)
     series_ids_needing_path: list[str] = []
