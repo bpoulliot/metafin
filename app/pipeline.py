@@ -439,6 +439,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
                     resolved_episode_paths[sid] = ""
 
     # Phase 1b: filter already-current items (sequential — SQLite reads)
+    log.info("Phase 1b: checking %d items (mtime filter, network stat calls)…", len(items))
     to_probe: list[tuple[dict, str, str, float]] = []  # (item, file_path, item_root, mtime)
     for item in items:
         if progress.cancelled:
@@ -479,10 +480,12 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
         to_probe.append((item, file_path, item_root, mtime))
 
     # Phase 2: parallel ffprobe — pure I/O, no shared state writes
+    log.info("Phase 1b complete: %d items queued for probe", len(to_probe))
     max_workers = min(cfg.scan.max_workers, max(1, len(to_probe)))
     probe_results: dict[str, MediaInfo | None] = {}
     if to_probe:
         total_probe = len(to_probe)
+        log.info("Phase 2: probing %d files with %d workers…", total_probe, max_workers)
         progress.emit(f"[metafin] Probing {total_probe} files with {max_workers} workers…")
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
             future_to_path = {pool.submit(probe_file, fp): fp for _, fp, _, _ in to_probe}
@@ -499,6 +502,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
                     progress.emit(f"[metafin] Probed {probed}/{total_probe} files…")
 
     # Phase 3: tag, overlay, and persist results (sequential — SQLite writes, API calls)
+    log.info("Phase 3: tagging %d items…", len(to_probe))
     try:
         for item, file_path, item_root, mtime in to_probe:
             if progress.cancelled:
