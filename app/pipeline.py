@@ -483,40 +483,50 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
                     probe_results[fp] = None
 
     # Phase 3: tag, overlay, and persist results (sequential — SQLite writes, API calls)
-    for item, file_path, item_root, mtime in to_probe:
-        if progress.cancelled:
-            progress.emit("[metafin] Scan cancelled by user")
-            break
+    try:
+        for item, file_path, item_root, mtime in to_probe:
+            if progress.cancelled:
+                progress.emit("[metafin] Scan cancelled by user")
+                break
 
-        item_id = item.get("Id", "")
-        name = item.get("Name", item_id)
-        progress.current_item = name
+            item_id = item.get("Id", "")
+            name = item.get("Name", item_id)
+            progress.current_item = name
 
-        info = probe_results.get(file_path)
-        if info is None:
-            progress.emit(f"  ffprobe failed: {name} | path: {file_path}")
-            upsert_scan_error(session, item_id, name, file_path, "probe_failed")
+            info = probe_results.get(file_path)
+            if info is None:
+                progress.emit(f"  ffprobe failed: {name} | path: {file_path}")
+                upsert_scan_error(session, item_id, name, file_path, "probe_failed")
+                progress.done += 1
+                continue
+
+            progress.emit(f"  scanning: {name}")
+
+            try:
+                image_modified = _process_one_item(
+                    jf, sonarrs, radarrs, session, cfg, item, file_path, item_root, mtime, info
+                )
+            except Exception as exc:
+                log.error("Unhandled error processing %s: %s", name, exc, exc_info=True)
+                upsert_scan_error(session, item_id, name, file_path, f"process_error: {exc}")
+                progress.done += 1
+                continue
+
+            tagged += 1
+            images_modified += image_modified
+
+            progress.emit(
+                f"  done: {name} | {info.resolution} | {info.video_codec or '-'} | {info.hdr_type or '-'}"
+                f" | audio: {len(info.audio_tracks)} | subs: {len(info.subtitle_tracks)}"
+            )
             progress.done += 1
-            continue
-
-        progress.emit(f"  scanning: {name}")
-
-        image_modified = _process_one_item(jf, sonarrs, radarrs, session, cfg, item, file_path, item_root, mtime, info)
-        tagged += 1
-        images_modified += image_modified
-
-        progress.emit(
-            f"  done: {name} | {info.resolution} | {info.video_codec or '-'} | {info.hdr_type or '-'}"
-            f" | audio: {len(info.audio_tracks)} | subs: {len(info.subtitle_tracks)}"
-        )
-        progress.done += 1
-
-    set_meta(session, _TAG_CONFIG_KEY, current_hash)
-    finish_scan_run(session, run, scanned=len(items), tagged=tagged, images=images_modified)
-    session.close()
-    _close_clients(jf, sonarrs, radarrs)
-    progress.finish()
-    progress.emit(f"[metafin] Scan complete — scanned={len(items)}, tagged={tagged}, images={images_modified}")
+    finally:
+        set_meta(session, _TAG_CONFIG_KEY, current_hash)
+        finish_scan_run(session, run, scanned=len(items), tagged=tagged, images=images_modified)
+        session.close()
+        _close_clients(jf, sonarrs, radarrs)
+        progress.finish()
+        progress.emit(f"[metafin] Scan complete — scanned={len(items)}, tagged={tagged}, images={images_modified}")
 
 
 def _get_first_episode_path(jf: JellyfinClient, series_id: str) -> str | None:
