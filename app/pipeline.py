@@ -496,6 +496,9 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
             future_to_path = {pool.submit(probe_file, fp): fp for _, fp, _, _ in to_probe}
             probed = 0
             for future in as_completed(future_to_path):
+                if progress.cancelled:
+                    progress.emit("[metafin] Scan cancelled by user")
+                    break
                 fp = future_to_path[future]
                 try:
                     probe_results[fp] = future.result()
