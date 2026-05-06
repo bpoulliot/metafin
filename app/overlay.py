@@ -150,6 +150,22 @@ def _measure_group_height(
     return ref_h + pad_v * 2
 
 
+def _truncate_label(label: str, max_w: int, font, pad_h: int) -> str:
+    """Trim trailing space-separated tokens from label until its pill fits within max_w px."""
+    def _pw(s: str) -> int:
+        bb = font.getbbox(s)
+        return bb[2] - bb[0] + pad_h * 2
+
+    if _pw(label) <= max_w:
+        return label
+    tokens = label.split()
+    for i in range(len(tokens) - 1, 0, -1):
+        candidate = " ".join(tokens[:i]) + "…"
+        if _pw(candidate) <= max_w:
+            return candidate
+    return tokens[0]  # first token alone can't be truncated further
+
+
 def _render_group(
     base: Image.Image,
     labels: list[str],
@@ -175,9 +191,10 @@ def _render_group(
     pill_h = ref_h + pad_v * 2
     max_row_w = img_w - 2 * margin
 
-    # Compute pill widths
+    # Truncate any label whose pill would alone exceed the row width, then compute sizes
     badge_sizes: list[tuple[str, int]] = []
     for badge in labels:
+        badge = _truncate_label(badge, max_row_w, font, pad_h)
         bbox = font.getbbox(badge)
         w = bbox[2] - bbox[0] + pad_h * 2
         badge_sizes.append((badge, w))
@@ -205,10 +222,7 @@ def _render_group(
         while len(row) > 1 and used_w + e_needed > max_row_w:
             _, removed_bw = row.pop()
             used_w -= removed_bw + col_gap
-        if not row:
-            # First badge alone exceeds max_row_w — force it in; no room for ellipsis
-            row.append(badge_sizes[0])
-        elif used_w + e_needed <= max_row_w:
+        if used_w + e_needed <= max_row_w:
             row.append((e_text, e_w))
         # else: exactly 1 badge fills the row — silently omit ellipsis, badge presence implies content
 
