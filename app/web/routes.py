@@ -8,7 +8,6 @@ import os
 import threading
 from pathlib import Path
 
-import httpx
 from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
@@ -447,19 +446,19 @@ async def save_config_yaml(request: Request, body: ConfigSaveRequest):
 async def jellyfin_libraries(request: Request):
     _require_user(request)
     cfg = get_config()
-    jf = JellyfinClient(cfg.jellyfin.url, cfg.jellyfin.api_key)
-    try:
-        libs = jf.get_libraries()
-        return [
-            {
-                "id": lib.get("ItemId", lib.get("Id", "")),
-                "name": lib.get("Name", ""),
-                "type": lib.get("CollectionType", ""),
-            }
-            for lib in libs
-        ]
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    with JellyfinClient(cfg.jellyfin.url, cfg.jellyfin.api_key) as jf:
+        try:
+            libs = jf.get_libraries()
+            return [
+                {
+                    "id": lib.get("ItemId", lib.get("Id", "")),
+                    "name": lib.get("Name", ""),
+                    "type": lib.get("CollectionType", ""),
+                }
+                for lib in libs
+            ]
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 class _ConnTestReq(BaseModel):
@@ -569,11 +568,11 @@ _PREVIEW_CACHE = Path(__file__).parent.parent / "static" / "preview_cache"
 async def jellyfin_sample_items(request: Request, limit: int = 12):
     _require_user(request)
     cfg = get_config()
-    jf = JellyfinClient(cfg.jellyfin.url, cfg.jellyfin.api_key)
-    try:
-        return jf.get_sample_items(limit)
-    except Exception:
-        return []
+    with JellyfinClient(cfg.jellyfin.url, cfg.jellyfin.api_key) as jf:
+        try:
+            return jf.get_sample_items(limit)
+        except Exception:
+            return []
 
 
 @router.get("/api/preview/sample-posters")
@@ -589,8 +588,8 @@ async def preview_sample_posters(request: Request, source: str = "synthetic"):
     if source == "jellyfin":
         try:
             cfg = get_config()
-            jf = JellyfinClient(cfg.jellyfin.url, cfg.jellyfin.api_key)
-            jf_items = jf.get_diverse_sample_items(8)
+            with JellyfinClient(cfg.jellyfin.url, cfg.jellyfin.api_key) as jf:
+                jf_items = jf.get_diverse_sample_items(8)
             if jf_items:
                 return [
                     {"source": "jellyfin", "item_id": item["Id"], "name": item.get("Name", "")} for item in jf_items
@@ -684,14 +683,13 @@ async def preview_image(
             pass
         if base_image_bytes is None:
             try:
-                jf = JellyfinClient(cfg.jellyfin.url, cfg.jellyfin.api_key)
-                r = httpx.get(
-                    f"{jf.base}/Items/{item_id}/Images/Primary",
-                    headers=jf._headers,
-                    timeout=10,
-                )
-                if r.status_code == 200:
-                    base_image_bytes = r.content
+                with JellyfinClient(cfg.jellyfin.url, cfg.jellyfin.api_key) as jf:
+                    r = jf._client.get(
+                        f"{jf.base}/Items/{item_id}/Images/Primary",
+                        timeout=10,
+                    )
+                    if r.status_code == 200:
+                        base_image_bytes = r.content
             except Exception:  # noqa: S110
                 pass
     elif sample:
