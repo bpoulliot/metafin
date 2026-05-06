@@ -95,6 +95,22 @@ class JellyfinClient:
         return results[:count]
 
     def get_items(self, library_ids: list[str] | None = None) -> list[dict]:
+        if not library_ids:
+            return self._fetch_items(parent_id=None)
+        if len(library_ids) == 1:
+            return self._fetch_items(parent_id=library_ids[0])
+        # ParentId accepts only one ID — fetch each library separately and merge
+        seen: set[str] = set()
+        merged: list[dict] = []
+        for lib_id in library_ids:
+            for item in self._fetch_items(parent_id=lib_id):
+                item_id = item.get("Id", "")
+                if item_id not in seen:
+                    seen.add(item_id)
+                    merged.append(item)
+        return merged
+
+    def _fetch_items(self, parent_id: str | None = None) -> list[dict]:
         params: dict[str, Any] = {
             "Recursive": "true",
             "IncludeItemTypes": "Movie,Series",
@@ -102,8 +118,8 @@ class JellyfinClient:
             "Limit": 500,
             "StartIndex": 0,
         }
-        if library_ids:
-            params["ParentId"] = ",".join(library_ids)
+        if parent_id:
+            params["ParentId"] = parent_id
         all_items: list[dict] = []
         while True:
             data = self._get("/Items", **params)
