@@ -21,6 +21,12 @@ class JellyfinClient:
     def close(self) -> None:
         self._client.close()
 
+    def __enter__(self) -> JellyfinClient:
+        return self
+
+    def __exit__(self, *_) -> None:
+        self.close()
+
     def _get(self, path: str, **params) -> Any:
         r = self._client.get(f"{self.base}{path}", params=params)
         r.raise_for_status()
