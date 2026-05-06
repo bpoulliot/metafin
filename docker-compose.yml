@@ -26,6 +26,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    mem_limit: 1g
-    cpus: 2.0
+    mem_limit: 1g  # increase to 2g+ if OOM killed during full scans on large libraries
+    cpus: 2.0      # increase for faster ffprobe throughput during scans
     restart: unless-stopped
