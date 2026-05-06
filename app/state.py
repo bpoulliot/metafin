@@ -212,6 +212,11 @@ def finish_scan_run(session: Session, run: ScanRun, scanned: int, tagged: int, i
     run.items_tagged = tagged
     run.items_image_modified = images
     session.commit()
+    # Prune: keep only the 50 most recent scan runs
+    cutoff = session.query(ScanRun.id).order_by(ScanRun.started_at.desc()).offset(50).limit(1).scalar()
+    if cutoff:
+        session.query(ScanRun).filter(ScanRun.id <= cutoff).delete()
+        session.commit()
 
 
 def get_last_scan(session: Session) -> ScanRun | None:
