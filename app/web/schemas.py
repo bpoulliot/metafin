@@ -7,7 +7,7 @@ class ScanStatusResponse(BaseModel):
     running: bool
     cancelled: bool = False
     total: int
-    done: int
+    done: float
     current_item: str
     error: str | None = None
 

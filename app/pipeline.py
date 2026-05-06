@@ -414,15 +414,10 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
                 except Exception as exc:
                     log.warning("Preload failed for %s: %s", futures[future].name, exc)
 
-    # Phase 1a: pre-resolve episode paths for all series in parallel (I/O-bound network calls)
-    series_ids_needing_path: list[str] = []
-    for item in items:
-        if item.get("Type") != "Series":
-            continue
-        media_sources = item.get("MediaSources") or []
-        fp = media_sources[0].get("Path", "") if media_sources else item.get("Path", "")
-        if fp and Path(fp).is_dir():
-            series_ids_needing_path.append(item.get("Id", ""))
+    # Phase 1a: pre-resolve episode paths for ALL series in parallel.
+    # We always resolve regardless of whether the series folder exists locally — the folder
+    # may have moved (e.g. mount restructure) while Jellyfin still knows the episode paths.
+    series_ids_needing_path: list[str] = [item.get("Id", "") for item in items if item.get("Type") == "Series"]
 
     resolved_episode_paths: dict[str, str] = {}
     if series_ids_needing_path:
@@ -460,9 +455,11 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
             file_path = item.get("Path", "")
 
         item_root = item.get("Path", "")
-        if item.get("Type") == "Series" and file_path and Path(file_path).is_dir():
-            item_root = file_path
-            file_path = resolved_episode_paths.get(item_id, "")
+        if item.get("Type") == "Series":
+            resolved = resolved_episode_paths.get(item_id, "")
+            if resolved:
+                item_root = file_path if (file_path and Path(file_path).is_dir()) else ""
+                file_path = resolved
 
         if not file_path or not Path(file_path).exists():
             error_type = "no_path" if not file_path else "no_file"
