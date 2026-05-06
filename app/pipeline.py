@@ -343,7 +343,7 @@ def _make_badge_groups(
     # Rating badge (top-right, independent)
     rating_group: BadgeGroup | None = None
     if img_cfg.show_rating_badge and content_rating and "poster" in dest.rating:
-        rating_group = BadgeGroup([content_rating], img_cfg.rating_badge_color, img_cfg.badge_text_color)
+        rating_group = BadgeGroup([f"Rated {content_rating}"], img_cfg.rating_badge_color, img_cfg.badge_text_color)
 
     return groups, rating_group
 
