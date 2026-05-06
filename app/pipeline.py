@@ -462,8 +462,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
             msg = f"skip (no file): {name} | path tried: {file_path or '(empty)'}"
             progress.emit(f"  {msg}")
             log.warning(msg)
-            if file_path:  # only record when a path was returned but doesn't exist
-                upsert_scan_error(session, item_id, name, file_path, "no_file")
+            upsert_scan_error(session, item_id, name, file_path or "", "no_file")
             progress.done += 1
             continue
 
@@ -483,9 +482,11 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
     max_workers = min(cfg.scan.max_workers, max(1, len(to_probe)))
     probe_results: dict[str, MediaInfo | None] = {}
     if to_probe:
-        progress.emit(f"[metafin] Probing {len(to_probe)} files with {max_workers} workers…")
+        total_probe = len(to_probe)
+        progress.emit(f"[metafin] Probing {total_probe} files with {max_workers} workers…")
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
             future_to_path = {pool.submit(probe_file, fp): fp for _, fp, _, _ in to_probe}
+            probed = 0
             for future in as_completed(future_to_path):
                 fp = future_to_path[future]
                 try:
@@ -493,6 +494,9 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
                 except Exception as exc:
                     log.warning("probe_file error for %s: %s", fp, exc)
                     probe_results[fp] = None
+                probed += 1
+                if probed % 100 == 0 or probed == total_probe:
+                    progress.emit(f"[metafin] Probed {probed}/{total_probe} files…")
 
     # Phase 3: tag, overlay, and persist results (sequential — SQLite writes, API calls)
     try:
