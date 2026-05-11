@@ -13,4 +13,4 @@ python-multipart==0.0.27
 anyio==4.9.0
 bcrypt==4.3.0
 slowapi==0.1.9
-orjson==3.11.8
+orjson==3.11.9
