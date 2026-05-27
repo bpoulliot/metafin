@@ -152,6 +152,7 @@ def _measure_group_height(
 
 def _truncate_label(label: str, max_w: int, font, pad_h: int) -> str:
     """Trim trailing space-separated tokens from label until its pill fits within max_w px."""
+
     def _pw(s: str) -> int:
         bb = font.getbbox(s)
         return bb[2] - bb[0] + pad_h * 2
