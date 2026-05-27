@@ -87,7 +87,7 @@ def _require_user(request: Request) -> str:
 async def login_page(request: Request):
     if _current_user(request):
         return RedirectResponse("/", status_code=302)
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request, "login.html", context={"error": None})
 
 
 @router.post("/login")
@@ -114,7 +114,7 @@ async def login(
         )
         return resp
     return templates.TemplateResponse(
-        "login.html", {"request": request, "error": "Invalid username or password"}, status_code=401
+        request, "login.html", context={"error": "Invalid username or password"}, status_code=401
     )
 
 
@@ -136,7 +136,7 @@ async def logout(request: Request):
 async def dashboard(request: Request):
     if not _current_user(request):
         return RedirectResponse("/login", status_code=302)
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 # ---------------------------------------------------------------------------
