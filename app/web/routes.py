@@ -54,6 +54,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
+_version_file = Path(__file__).parent.parent.parent / "VERSION"
+_APP_VERSION = _version_file.read_text().strip() if _version_file.exists() else "dev"
+
 SESSION_COOKIE = "metafin_session"
 _SECURE_COOKIE = os.environ.get("SECURE_COOKIES", "true").lower() not in ("false", "0", "no")
 _limiter = Limiter(key_func=get_remote_address)
@@ -87,7 +90,7 @@ def _require_user(request: Request) -> str:
 async def login_page(request: Request):
     if _current_user(request):
         return RedirectResponse("/", status_code=302)
-    return templates.TemplateResponse(request, "login.html", context={"error": None})
+    return templates.TemplateResponse(request, "login.html", context={"error": None, "v": _APP_VERSION})
 
 
 @router.post("/login")
@@ -114,7 +117,7 @@ async def login(
         )
         return resp
     return templates.TemplateResponse(
-        request, "login.html", context={"error": "Invalid username or password"}, status_code=401
+        request, "login.html", context={"error": "Invalid username or password", "v": _APP_VERSION}, status_code=401
     )
 
 
@@ -136,7 +139,7 @@ async def logout(request: Request):
 async def dashboard(request: Request):
     if not _current_user(request):
         return RedirectResponse("/login", status_code=302)
-    return templates.TemplateResponse(request, "index.html")
+    return templates.TemplateResponse(request, "index.html", context={"v": _APP_VERSION})
 
 
 # ---------------------------------------------------------------------------
