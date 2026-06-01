@@ -99,6 +99,7 @@ def _tag_config_hash(cfg: AppConfig) -> str:
     dest = cfg.tags.destinations
     raw = (
         f"{cfg.tags.managed_prefix}|{cfg.tags.dual_audio_tag}|{cfg.tags.multi_audio_tag}"
+        f"|legacy:{','.join(sorted(cfg.tags.legacy_prefixes))}"
         f"|video:{','.join(sorted(dest.video))}"
         f"|audio:{','.join(sorted(dest.audio))}"
         f"|subtitles:{','.join(sorted(dest.subtitles))}"
@@ -138,6 +139,7 @@ def _process_one_item(
     item_id = item.get("Id", "")
     name = item.get("Name", item_id)
     prefix = cfg.tags.managed_prefix
+    legacy_prefixes = cfg.tags.legacy_prefixes
 
     jf_rating = item.get("OfficialRating") or ""
     arr_cert = _get_arr_certification(item, sonarrs, radarrs) if not jf_rating else ""
@@ -175,7 +177,7 @@ def _process_one_item(
     )
 
     try:
-        jf.set_managed_tags(item_id, item, prefix, jf_tags, fallback_rating=arr_cert)
+        jf.set_managed_tags(item_id, item, prefix, jf_tags, fallback_rating=arr_cert, legacy_prefixes=legacy_prefixes)
     except Exception as exc:
         log.warning("Jellyfin tag error for %s: %s", name, exc)
 
@@ -183,7 +185,7 @@ def _process_one_item(
     if sonarr_id and sonarrs:
         for client in sonarrs:
             try:
-                client.set_managed_tags(sonarr_id, prefix, sonarr_tags)
+                client.set_managed_tags(sonarr_id, prefix, sonarr_tags, legacy_prefixes=legacy_prefixes)
             except Exception as exc:
                 log.debug("Sonarr tag error [%s] %s: %s", client.name, name, exc)
 
@@ -191,7 +193,7 @@ def _process_one_item(
     if radarr_id and radarrs:
         for client in radarrs:
             try:
-                client.set_managed_tags(radarr_id, prefix, radarr_tags)
+                client.set_managed_tags(radarr_id, prefix, radarr_tags, legacy_prefixes=legacy_prefixes)
             except Exception as exc:
                 log.debug("Radarr tag error [%s] %s: %s", client.name, name, exc)
 

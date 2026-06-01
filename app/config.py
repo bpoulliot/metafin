@@ -58,7 +58,8 @@ class TagDestinations(BaseModel):
 
 
 class TagsConfig(BaseModel):
-    managed_prefix: str = "mf-"
+    managed_prefix: str = "xt-"
+    legacy_prefixes: list[str] = Field(default_factory=lambda: ["mf-"])
     dual_audio_tag: str = "dual-audio"
     multi_audio_tag: str = "multi-audio"
     destinations: TagDestinations = Field(default_factory=TagDestinations)

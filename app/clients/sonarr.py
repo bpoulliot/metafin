@@ -83,7 +83,9 @@ class SonarrClient:
     def get_series_by_id(self, series_id: int) -> dict:
         return self._get(f"/series/{series_id}")
 
-    def set_managed_tags(self, series_id: int, prefix: str, new_tag_labels: list[str]) -> None:
+    def set_managed_tags(
+        self, series_id: int, prefix: str, new_tag_labels: list[str], legacy_prefixes: list[str] = ()
+    ) -> None:
         cache = getattr(self, "_series_cache", None)
         if cache is not None:
             series = cache.get(series_id)
@@ -94,8 +96,8 @@ class SonarrClient:
         if self._tag_cache is None:
             self._tag_cache = self._load_tags()
 
-        # IDs of tags this tool manages (those whose label starts with prefix)
-        managed_ids = {tid for label, tid in self._tag_cache.items() if label.startswith(prefix)}
+        all_prefixes = (prefix, *legacy_prefixes)
+        managed_ids = {tid for label, tid in self._tag_cache.items() if any(label.startswith(p) for p in all_prefixes)}
         current_ids: list[int] = series.get("tags") or []
 
         # Remove managed, add new
