@@ -56,6 +56,6 @@ image:
 
 auth:
   username: admin
-  password_hash: ""  # auto-generated on first run; set via METAFIN_USERNAME/METAFIN_PASSWORD env vars
+  password_hash: ""  # auto-generated on first run; set via XENOTAG_USERNAME/XENOTAG_PASSWORD env vars
 
 log_level: INFO

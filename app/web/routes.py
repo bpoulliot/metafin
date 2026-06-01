@@ -57,7 +57,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 _version_file = Path(__file__).parent.parent.parent / "VERSION"
 _APP_VERSION = _version_file.read_text().strip() if _version_file.exists() else "dev"
 
-SESSION_COOKIE = "metafin_session"
+SESSION_COOKIE = "xenotag_session"
 _SECURE_COOKIE = os.environ.get("SECURE_COOKIES", "true").lower() not in ("false", "0", "no")
 _limiter = Limiter(key_func=get_remote_address)
 

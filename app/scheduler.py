@@ -9,7 +9,7 @@ from apscheduler.triggers.cron import CronTrigger
 log = logging.getLogger(__name__)
 
 _scheduler: BackgroundScheduler | None = None
-_JOB_ID = "metafin_incremental_scan"
+_JOB_ID = "xenotag_incremental_scan"
 
 
 def start(schedule: str, scan_fn) -> None:

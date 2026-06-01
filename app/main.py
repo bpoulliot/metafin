@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Metafin",
+    title="Xenotag",
     version=_version,
     lifespan=lifespan,
     default_response_class=ORJSONResponse,

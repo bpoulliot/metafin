@@ -1,4 +1,4 @@
-# Metafin — Claude Code Instructions
+# Xenotag — Claude Code Instructions
 
 ## Git Workflow
 

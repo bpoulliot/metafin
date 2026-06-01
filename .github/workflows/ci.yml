@@ -73,7 +73,7 @@ jobs:
           context: .
           push: false
           load: true
-          tags: metafin:ci
+          tags: xenotag:ci
           build-args: BUILD_VERSION=ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -81,7 +81,7 @@ jobs:
       - name: Scan image for vulnerabilities (Trivy)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: metafin:ci
+          image-ref: xenotag:ci
           format: table
           exit-code: "1"
           severity: CRITICAL,HIGH

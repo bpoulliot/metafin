@@ -14,9 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY VERSION .
 COPY app/ ./app/
 
-RUN useradd --uid 1000 --no-create-home --shell /sbin/nologin metafin \
-    && chown -R metafin /app
-USER metafin
+RUN useradd --uid 1000 --no-create-home --shell /sbin/nologin xenotag \
+    && chown -R xenotag /app
+USER xenotag
 
 EXPOSE 7755
 
@@ -24,9 +24,9 @@ ENV PYTHONUNBUFFERED=1
 ENV CONFIG_PATH=/config/config.yml
 
 ARG BUILD_VERSION=dev
-LABEL org.opencontainers.image.title="Metafin" \
+LABEL org.opencontainers.image.title="Xenotag" \
       org.opencontainers.image.description="Jellyfin media tagger and poster badge overlay service" \
-      org.opencontainers.image.source="https://github.com/bpoulliot/metafin" \
+      org.opencontainers.image.source="https://github.com/bpoulliot/xenotag" \
       org.opencontainers.image.version="${BUILD_VERSION}" \
       org.opencontainers.image.licenses="MIT"
 

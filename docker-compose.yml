@@ -1,17 +1,17 @@
 services:
-  metafin:
-    image: ghcr.io/bpoulliot/metafin:latest
-    container_name: metafin
+  xenotag:
+    image: ghcr.io/bpoulliot/xenotag:latest
+    container_name: xenotag
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - "/path/to/metafin/config:/config"
+      - "/path/to/xenotag/config:/config"
       # Media mounts must match Jellyfin's container-side paths exactly so that
-      # file paths returned by the Jellyfin API are accessible to Metafin.
+      # file paths returned by the Jellyfin API are accessible to Xenotag.
       # Add one entry per media root, mirroring your Jellyfin volume mounts.
-      # Example: if Jellyfin mounts your movies as /media/movies, Metafin must
+      # Example: if Jellyfin mounts your movies as /media/movies, Xenotag must
       # also mount that same host path at /media/movies.
       - "/path/to/media/movies:/media/movies:rw"
       - "/path/to/media/tv:/media/tv:rw"
