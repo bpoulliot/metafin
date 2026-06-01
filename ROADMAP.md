@@ -35,6 +35,7 @@ Easy wins = high value, low complexity. Categories: **U** = user-facing behavior
 | I3 | Alembic DB migrations: structured schema versioning; required before any further schema changes | 5 | 3 | [#15](https://github.com/bpoulliot/xenotag/issues/15) |
 | I4 | HTTP connection pooling for Jellyfin/Sonarr/Radarr clients | 3 | 1 | [#19](https://github.com/bpoulliot/xenotag/issues/19) |
 | I5 | Prometheus metrics endpoint | 3 | 2 | [#17](https://github.com/bpoulliot/xenotag/issues/17) |
+| I6 | ntfy push notifications: configurable server URL, token, and topic in settings UI; notify on scan complete, scan error, and batch tag events | 3 | 2 | — |
 
 ---
 
