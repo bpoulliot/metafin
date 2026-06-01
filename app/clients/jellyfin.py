@@ -146,7 +146,13 @@ class JellyfinClient:
         return items[0] if items else {}
 
     def set_managed_tags(
-        self, item_id: str, item: dict, prefix: str, new_tags: list[str], fallback_rating: str = ""
+        self,
+        item_id: str,
+        item: dict,
+        prefix: str,
+        new_tags: list[str],
+        fallback_rating: str = "",
+        legacy_prefixes: list[str] = (),
     ) -> None:
         """Replace all prefix-managed tags on the item with new_tags (Jellyfin 10.9+ PUT approach).
 
@@ -154,7 +160,8 @@ class JellyfinClient:
         Pass it from arr cert data when Jellyfin had no rating and arr provided one.
         """
         existing = self.get_tags(item)
-        user_tags = [t for t in existing if not t.startswith(prefix)]
+        all_prefixes = (prefix, *legacy_prefixes)
+        user_tags = [t for t in existing if not any(t.startswith(p) for p in all_prefixes)]
         merged = user_tags + new_tags
 
         # POST /Items/{id} with a minimal UpdateRequest DTO (Jellyfin 10.9+)

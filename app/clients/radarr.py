@@ -79,7 +79,9 @@ class RadarrClient:
     def get_movie_by_id(self, movie_id: int) -> dict:
         return self._get(f"/movie/{movie_id}")
 
-    def set_managed_tags(self, movie_id: int, prefix: str, new_tag_labels: list[str]) -> None:
+    def set_managed_tags(
+        self, movie_id: int, prefix: str, new_tag_labels: list[str], legacy_prefixes: list[str] = ()
+    ) -> None:
         cache = getattr(self, "_movie_cache", None)
         if cache is not None:
             movie = cache.get(movie_id)
@@ -90,7 +92,8 @@ class RadarrClient:
         if self._tag_cache is None:
             self._tag_cache = self._load_tags()
 
-        managed_ids = {tid for label, tid in self._tag_cache.items() if label.startswith(prefix)}
+        all_prefixes = (prefix, *legacy_prefixes)
+        managed_ids = {tid for label, tid in self._tag_cache.items() if any(label.startswith(p) for p in all_prefixes)}
         current_ids: list[int] = movie.get("tags") or []
         kept = [tid for tid in current_ids if tid not in managed_ids]
         new_ids = self._tag_ids(new_tag_labels)
