@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Generates synthetic test MKV files and placeholder poster images for Metafin dev/testing.
+# Generates synthetic test MKV files and placeholder poster images for Xenotag dev/testing.
 # Requires: ffmpeg. Pillow optional (for poster images).
 
 set -euo pipefail

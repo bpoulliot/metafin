@@ -102,7 +102,7 @@ def delete_session(token: str) -> None:
 def bootstrap(cfg_auth, save_fn) -> None:
     """
     Ensure a signing secret and admin account exist.
-    Priority: existing values in config > METAFIN_USERNAME/PASSWORD env vars > auto-generated.
+    Priority: existing values in config > XENOTAG_USERNAME/PASSWORD env vars > auto-generated.
     """
     changed = False
 
@@ -111,16 +111,16 @@ def bootstrap(cfg_auth, save_fn) -> None:
         changed = True
 
     if not cfg_auth.password_hash:
-        username = os.environ.get("METAFIN_USERNAME", "") or cfg_auth.username or "admin"
-        password = os.environ.get("METAFIN_PASSWORD", "")
+        username = os.environ.get("XENOTAG_USERNAME", "") or cfg_auth.username or "admin"
+        password = os.environ.get("XENOTAG_PASSWORD", "")
 
         if not password:
             password = secrets.token_urlsafe(12)
             log.warning("=" * 60)
-            log.warning("METAFIN FIRST RUN — auto-generated credentials:")
+            log.warning("XENOTAG FIRST RUN — auto-generated credentials:")
             log.warning("  Username : %s", username)
             log.warning("  Password : %s", password)
-            log.warning("  Change these in Settings or set METAFIN_USERNAME / METAFIN_PASSWORD env vars")
+            log.warning("  Change these in Settings or set XENOTAG_USERNAME / XENOTAG_PASSWORD env vars")
             log.warning("=" * 60)
 
         cfg_auth.username = username

@@ -349,14 +349,14 @@ def _make_badge_groups(
 
 def _run_scan(cfg: AppConfig, incremental: bool) -> None:
     scan_type = "incremental" if incremental else "full"
-    progress.emit(f"[metafin] Starting {scan_type} scan…")
+    progress.emit(f"[xenotag] Starting {scan_type} scan…")
 
     jf, sonarrs, radarrs = _clients_from_config(cfg)
 
     if not sonarrs:
-        progress.emit("[metafin] No Sonarr instances configured — skipping Sonarr tagging")
+        progress.emit("[xenotag] No Sonarr instances configured — skipping Sonarr tagging")
     if not radarrs:
-        progress.emit("[metafin] No Radarr instances configured — skipping Radarr tagging")
+        progress.emit("[xenotag] No Radarr instances configured — skipping Radarr tagging")
 
     session = get_session()
     run = start_scan_run(session, scan_type)
@@ -365,7 +365,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
     stored_hash = get_meta(session, _TAG_CONFIG_KEY)
     tag_config_changed = stored_hash != current_hash
     if tag_config_changed and incremental:
-        progress.emit("[metafin] Tag config changed — forcing full re-tag of all items")
+        progress.emit("[xenotag] Tag config changed — forcing full re-tag of all items")
         incremental = False
 
     if not incremental:
@@ -374,7 +374,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
     try:
         items = jf.get_items(cfg.jellyfin.library_ids or None)
     except Exception as exc:
-        msg = f"[metafin] FATAL: Could not fetch Jellyfin items: {exc}"
+        msg = f"[xenotag] FATAL: Could not fetch Jellyfin items: {exc}"
         progress.emit(msg)
         log.error(msg)
         session.close()
@@ -393,10 +393,10 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
                 path_filters,
             )
         ]
-        progress.emit(f"[metafin] Path filter: {before} → {len(items)} items")
+        progress.emit(f"[xenotag] Path filter: {before} → {len(items)} items")
 
     progress.total = len(items)
-    progress.emit(f"[metafin] {len(items)} items to process")
+    progress.emit(f"[xenotag] {len(items)} items to process")
 
     tagged = 0
     images_modified = 0
@@ -404,7 +404,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
     # Preload Sonarr/Radarr series and movie catalogues in parallel so Phase 3
     # can use dict lookups instead of per-item API GETs.
     if sonarrs or radarrs:
-        progress.emit("[metafin] Preloading Sonarr/Radarr catalogues…")
+        progress.emit("[xenotag] Preloading Sonarr/Radarr catalogues…")
         workers = max(1, len(sonarrs) + len(radarrs))
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = {pool.submit(c.preload): c for c in sonarrs + radarrs}  # type: ignore[arg-type]
@@ -421,7 +421,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
 
     resolved_episode_paths: dict[str, str] = {}
     if series_ids_needing_path:
-        progress.emit(f"[metafin] Resolving episode paths for {len(series_ids_needing_path)} series…")
+        progress.emit(f"[xenotag] Resolving episode paths for {len(series_ids_needing_path)} series…")
         workers = min(cfg.scan.max_workers, len(series_ids_needing_path))
         with ThreadPoolExecutor(max_workers=workers) as pool:
             future_to_sid = {pool.submit(_get_first_episode_path, jf, sid): sid for sid in series_ids_needing_path}
@@ -435,15 +435,15 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
 
     # Phase 1b: filter already-current items (sequential — SQLite reads)
     log.info("Phase 1b: checking %d items (mtime filter, network stat calls)…", len(items))
-    progress.emit(f"[metafin] Phase 1b: checking {len(items)} items…")
+    progress.emit(f"[xenotag] Phase 1b: checking {len(items)} items…")
     to_probe: list[tuple[dict, str, str, float]] = []  # (item, file_path, item_root, mtime)
     _checked = 0
     for item in items:
         _checked += 1
         if _checked % 1000 == 0:
-            progress.emit(f"[metafin] Checked {_checked}/{len(items)} items…")
+            progress.emit(f"[xenotag] Checked {_checked}/{len(items)} items…")
         if progress.cancelled:
-            progress.emit("[metafin] Scan cancelled by user")
+            progress.emit("[xenotag] Scan cancelled by user")
             break
 
         item_id = item.get("Id", "")
@@ -496,7 +496,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
     if to_probe:
         total_probe = len(to_probe)
         log.info("Phase 2+3: probing and tagging %d items with %d workers…", total_probe, max_workers)
-        progress.emit(f"[metafin] Probing {total_probe} files with {max_workers} workers…")
+        progress.emit(f"[xenotag] Probing {total_probe} files with {max_workers} workers…")
         path_to_item: dict[str, tuple[dict, str, float]] = {
             fp: (item, item_root, mtime) for item, fp, item_root, mtime in to_probe
         }
@@ -505,7 +505,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
             probed = 0
             for future in as_completed(future_to_path):
                 if progress.cancelled:
-                    progress.emit("[metafin] Scan cancelled by user")
+                    progress.emit("[xenotag] Scan cancelled by user")
                     break
                 fp = future_to_path[future]
                 item, item_root, mtime = path_to_item[fp]
@@ -519,7 +519,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
                 probed += 1
                 progress.done += 0.5
                 if probed % 100 == 0 or probed == total_probe:
-                    progress.emit(f"[metafin] Probed {probed}/{total_probe} files…")
+                    progress.emit(f"[xenotag] Probed {probed}/{total_probe} files…")
 
                 if info is None:
                     progress.emit(f"  ffprobe failed: {name} | path: {fp}")
@@ -548,7 +548,7 @@ def _run_scan(cfg: AppConfig, incremental: bool) -> None:
     session.close()
     _close_clients(jf, sonarrs, radarrs)
     progress.finish()
-    progress.emit(f"[metafin] Scan complete — scanned={items_count}, tagged={tagged}, images={images_modified}")
+    progress.emit(f"[xenotag] Scan complete — scanned={items_count}, tagged={tagged}, images={images_modified}")
 
 
 def _get_first_episode_path(jf: JellyfinClient, series_id: str) -> str | None:
