@@ -57,17 +57,17 @@ services:
       retries: 5
     restart: unless-stopped
 
-  metafin-dev:
+  xenotag-dev:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: metafin-dev
+    container_name: xenotag-dev
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=America/Denver
     volumes:
-      - ${HOME}/.mf-dev/configs/metafin:/config
+      - ${HOME}/.mf-dev/configs/xenotag:/config
       - ${HOME}/.mf-dev/media:${HOME}/.mf-dev/media:rw
       - ./app:/app/app  # live-reload mount for development
     ports:

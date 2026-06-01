@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Metafin</title>
+<title>Xenotag</title>
 <link rel="icon" href="/static/favicon.png?v={{ v }}" type="image/png">
 <style>
   :root {
@@ -198,8 +198,8 @@
 <body>
 
 <header>
-  <img src="/static/logo.png?v={{ v }}" onerror="this.style.display='none'" alt="Metafin">
-  <h1>Metafin</h1>
+  <img src="/static/logo.png?v={{ v }}" onerror="this.style.display='none'" alt="Xenotag">
+  <h1>Xenotag</h1>
   <nav class="nav">
     <button class="nav-btn active" onclick="switchPage('dashboard')">Dashboard</button>
     <button class="nav-btn" onclick="switchPage('preview')">Preview</button>
@@ -898,7 +898,7 @@ function startSSE() {
   sseSource.onerror = () => {
     const div = document.createElement('div');
     div.className = 'line err';
-    div.textContent = '[metafin] Live log connection lost — retrying…';
+    div.textContent = '[xenotag] Live log connection lost — retrying…';
     logBox.appendChild(div);
     logBox.scrollTop = logBox.scrollHeight;
   };
